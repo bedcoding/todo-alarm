@@ -7,6 +7,9 @@ contextBridge.exposeInMainWorld('api', {
   saveMemos: (memos: unknown[]) => ipcRenderer.invoke('save-memos', memos),
   getSettings: () => ipcRenderer.invoke('get-settings'),
   saveSettings: (settings: unknown) => ipcRenderer.invoke('save-settings', settings),
+  getAwayCheck: () => ipcRenderer.invoke('get-away-check'),
+  saveAwayCheck: (awayCheck: unknown) => ipcRenderer.invoke('save-away-check', awayCheck),
+  getIdleTime: () => ipcRenderer.invoke('get-idle-time'),
   openMainWindow: () => ipcRenderer.invoke('open-main-window'),
   testNotification: () => ipcRenderer.invoke('test-notification'),
   testSlack: (webhookUrl: string) => ipcRenderer.invoke('test-slack', webhookUrl),
@@ -16,5 +19,12 @@ contextBridge.exposeInMainWorld('api', {
   onMemosUpdated: (callback: (memos: unknown[]) => void) => {
     ipcRenderer.on('memos-updated', (_, memos) => callback(memos))
   },
-  checkNotificationPermission: () => ipcRenderer.invoke('check-notification-permission')
+  onAwayCheckUpdated: (callback: (awayCheck: unknown) => void) => {
+    ipcRenderer.on('away-check-updated', (_, awayCheck) => callback(awayCheck))
+  },
+  onIdleStatus: (callback: (data: unknown) => void) => {
+    ipcRenderer.on('idle-status', (_, data) => callback(data))
+  },
+  checkNotificationPermission: () => ipcRenderer.invoke('check-notification-permission'),
+  setPinned: (pinned: boolean) => ipcRenderer.invoke('set-pinned', pinned)
 })

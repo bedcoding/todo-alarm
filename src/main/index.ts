@@ -1,8 +1,8 @@
-import { app, BrowserWindow, ipcMain, Menu, Notification, Tray, nativeImage, screen, net } from 'electron'
+import { app, BrowserWindow, ipcMain, Menu, Notification, Tray, nativeImage, screen, net, powerMonitor } from 'electron'
 import path from 'path'
 import fs from 'fs'
-import type { AppData, Schedule, Memo, Settings } from '../types'
-import { DEFAULT_SETTINGS } from '../types'
+import type { AppData, Schedule, Memo, Settings, AwayCheckSettings } from '../types'
+import { DEFAULT_SETTINGS, DEFAULT_AWAY_CHECK } from '../types'
 
 let dataPath: string
 
@@ -12,10 +12,11 @@ function readData(): AppData {
     return {
       schedules: raw.schedules ?? [],
       memos: raw.memos ?? [],
-      settings: { ...DEFAULT_SETTINGS, ...raw.settings }
+      settings: { ...DEFAULT_SETTINGS, ...raw.settings },
+      awayCheck: { ...DEFAULT_AWAY_CHECK, ...raw.awayCheck }
     }
   } catch {
-    return { schedules: [], memos: [], settings: { ...DEFAULT_SETTINGS } }
+    return { schedules: [], memos: [], settings: { ...DEFAULT_SETTINGS }, awayCheck: { ...DEFAULT_AWAY_CHECK } }
   }
 }
 
@@ -27,7 +28,10 @@ let tray: Tray | null = null
 let popupWindow: BrowserWindow | null = null
 let mainWindow: BrowserWindow | null = null
 let alarmIntervalId: ReturnType<typeof setInterval> | null = null
+let awayCheckIntervalId: ReturnType<typeof setInterval> | null = null
+let awayAlertSent = false
 let lastBlurTime = 0
+let popupPinned = false
 
 function getRendererURL(hash = ''): string | null {
   if (process.env['ELECTRON_RENDERER_URL']) {
@@ -67,6 +71,7 @@ function createPopupWindow(): void {
   }
 
   popupWindow.on('blur', () => {
+    if (popupPinned) return
     if (popupWindow && popupWindow.isVisible()) {
       lastBlurTime = Date.now()
       popupWindow.hide()
@@ -247,6 +252,53 @@ function restartAlarmChecker(): void {
   startAlarmChecker()
 }
 
+function startAwayChecker(): void {
+  stopAwayChecker()
+  const data = readData()
+  if (!data.awayCheck.enabled) return
+
+  awayCheckIntervalId = setInterval(() => {
+    const current = readData()
+    if (!current.awayCheck.enabled) return
+
+    const idleSeconds = powerMonitor.getSystemIdleTime()
+
+    // UI에 현재 상태 전송
+    sendToAllWindows('idle-status', { idleSeconds, limitSeconds: current.awayCheck.limitMinutes * 60 })
+
+    if (idleSeconds >= current.awayCheck.limitMinutes * 60) {
+      if (!awayAlertSent) {
+        awayAlertSent = true
+
+        if (current.settings.macNotification) {
+          new Notification({
+            title: '⚠️ 이석 경고!',
+            body: `${current.awayCheck.limitMinutes}분 이상 자리를 비웠습니다!`,
+            sound: 'default'
+          }).show()
+        }
+
+        if (current.settings.slackEnabled && current.settings.slackWebhookUrl) {
+          sendSlackNotification(
+            current.settings.slackWebhookUrl,
+            `⚠️ *이석 경고!* ${current.awayCheck.limitMinutes}분 이상 자리를 비웠습니다!`
+          )
+        }
+      }
+    } else {
+      awayAlertSent = false
+    }
+  }, 5000) // 5초마다 체크
+}
+
+function stopAwayChecker(): void {
+  if (awayCheckIntervalId) {
+    clearInterval(awayCheckIntervalId)
+    awayCheckIntervalId = null
+  }
+  awayAlertSent = false
+}
+
 if (process.platform === 'darwin') {
   app.dock?.hide()
 }
@@ -256,6 +308,7 @@ app.whenReady().then(() => {
   createTray()
   createPopupWindow()
   startAlarmChecker()
+  startAwayChecker()
 })
 
 app.on('window-all-closed', () => {
@@ -288,6 +341,23 @@ ipcMain.handle('save-settings', (_, settings: Settings) => {
   if (intervalChanged) {
     restartAlarmChecker()
   }
+  return true
+})
+
+ipcMain.handle('get-away-check', () => readData().awayCheck)
+ipcMain.handle('save-away-check', (_, awayCheck: AwayCheckSettings) => {
+  const data = readData()
+  data.awayCheck = awayCheck
+  writeData(data)
+  sendToAllWindows('away-check-updated', awayCheck)
+  startAwayChecker()
+  return true
+})
+
+ipcMain.handle('get-idle-time', () => powerMonitor.getSystemIdleTime())
+
+ipcMain.handle('set-pinned', (_, pinned: boolean) => {
+  popupPinned = pinned
   return true
 })
 
