@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, Notification, Tray, nativeImage, screen, net } from 'electron'
+import { app, BrowserWindow, ipcMain, Menu, Notification, Tray, nativeImage, screen, net } from 'electron'
 import path from 'path'
 import fs from 'fs'
 import type { AppData, Schedule, Memo, Settings } from '../types'
@@ -27,6 +27,7 @@ let tray: Tray | null = null
 let popupWindow: BrowserWindow | null = null
 let mainWindow: BrowserWindow | null = null
 let alarmIntervalId: ReturnType<typeof setInterval> | null = null
+let lastBlurTime = 0
 
 function getRendererURL(hash = ''): string | null {
   if (process.env['ELECTRON_RENDERER_URL']) {
@@ -67,6 +68,7 @@ function createPopupWindow(): void {
 
   popupWindow.on('blur', () => {
     if (popupWindow && popupWindow.isVisible()) {
+      lastBlurTime = Date.now()
       popupWindow.hide()
     }
   })
@@ -123,16 +125,24 @@ function togglePopup(): void {
     return
   }
 
+  // blur로 방금 닫혔으면 다시 열지 않음 (트레이 클릭으로 닫기 위함)
+  if (Date.now() - lastBlurTime < 300) {
+    return
+  }
+
   const trayBounds = tray!.getBounds()
   const windowBounds = popupWindow!.getBounds()
   const display = screen.getDisplayNearestPoint({ x: trayBounds.x, y: trayBounds.y })
 
   const x = Math.round(trayBounds.x + trayBounds.width / 2 - windowBounds.width / 2)
-  const y = trayBounds.y + trayBounds.height + 4
+  // macOS: 트레이가 위에 있으므로 아래로, Windows: 트레이가 아래에 있으므로 위로
+  const y = process.platform === 'win32'
+    ? trayBounds.y - windowBounds.height - 4
+    : trayBounds.y + trayBounds.height + 4
 
   popupWindow!.setPosition(
     Math.max(display.workArea.x, Math.min(x, display.workArea.x + display.workArea.width - windowBounds.width)),
-    y
+    Math.max(display.workArea.y, Math.min(y, display.workArea.y + display.workArea.height - windowBounds.height))
   )
   popupWindow!.show()
   popupWindow!.focus()
@@ -151,6 +161,14 @@ function createTray(): void {
   tray = new Tray(icon)
   tray.setToolTip('Todo Alarm')
   tray.on('click', () => togglePopup())
+  tray.on('double-click', () => togglePopup())
+
+  const contextMenu = Menu.buildFromTemplate([
+    { label: '열기', click: () => createMainWindow() },
+    { type: 'separator' },
+    { label: '종료', click: () => app.quit() }
+  ])
+  tray.on('right-click', () => tray!.popUpContextMenu(contextMenu))
 }
 
 function sendToAllWindows(channel: string, data: unknown): void {
