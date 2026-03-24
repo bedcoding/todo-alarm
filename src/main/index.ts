@@ -82,7 +82,7 @@ function createMainWindow(): void {
     return
   }
 
-  mainWindow = new BrowserWindow({
+  const windowOptions: Electron.BrowserWindowConstructorOptions = {
     width: 1000,
     height: 700,
     minWidth: 800,
@@ -91,10 +91,15 @@ function createMainWindow(): void {
       preload: path.join(__dirname, '../preload/index.js'),
       contextIsolation: true,
       nodeIntegration: false
-    },
-    titleBarStyle: 'hiddenInset',
-    trafficLightPosition: { x: 16, y: 16 }
-  })
+    }
+  }
+
+  if (process.platform === 'darwin') {
+    windowOptions.titleBarStyle = 'hiddenInset'
+    windowOptions.trafficLightPosition = { x: 16, y: 16 }
+  }
+
+  mainWindow = new BrowserWindow(windowOptions)
 
   const url = getRendererURL()
   if (url) {
@@ -134,9 +139,14 @@ function togglePopup(): void {
 }
 
 function createTray(): void {
-  const iconPath = path.join(__dirname, '../../resources/iconTemplate.png')
+  const isWin = process.platform === 'win32'
+  const iconFile = isWin ? 'icon.ico' : 'iconTemplate.png'
+  const iconPath = path.join(__dirname, '../../resources', iconFile)
   const icon = nativeImage.createFromPath(iconPath)
-  icon.setTemplateImage(true)
+
+  if (!isWin) {
+    icon.setTemplateImage(true)
+  }
 
   tray = new Tray(icon)
   tray.setToolTip('Todo Alarm')
@@ -219,7 +229,9 @@ function restartAlarmChecker(): void {
   startAlarmChecker()
 }
 
-app.dock?.hide()
+if (process.platform === 'darwin') {
+  app.dock?.hide()
+}
 
 app.whenReady().then(() => {
   dataPath = path.join(app.getPath('userData'), 'data.json')
