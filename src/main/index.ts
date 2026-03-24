@@ -354,8 +354,6 @@ ipcMain.handle('save-away-check', (_, awayCheck: AwayCheckSettings) => {
   return true
 })
 
-ipcMain.handle('get-idle-time', () => powerMonitor.getSystemIdleTime())
-
 ipcMain.handle('set-pinned', (_, pinned: boolean) => {
   popupPinned = pinned
   return true
@@ -367,22 +365,6 @@ ipcMain.handle('open-main-window', () => {
     popupWindow.hide()
   }
   return true
-})
-
-ipcMain.handle('check-notification-permission', () => {
-  // macOS: 실제 알림 권한 확인 (bundle identifier 기반)
-  if (process.platform === 'darwin') {
-    try {
-      const { execSync } = require('child_process')
-      // UNUserNotificationCenter 권한 상태를 확인하는 간접 방법:
-      // Notification을 보내고 show/failed 이벤트로 판단하는 것이 더 정확하지만,
-      // 여기서는 Notification.isSupported()와 함께 안내 문구를 항상 표시하는 방식 사용
-      return Notification.isSupported()
-    } catch {
-      return Notification.isSupported()
-    }
-  }
-  return Notification.isSupported()
 })
 
 ipcMain.handle('test-notification', () => {

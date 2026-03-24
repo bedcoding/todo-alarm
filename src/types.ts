@@ -55,15 +55,13 @@ export interface ElectronAPI {
   saveSettings: (settings: Settings) => Promise<boolean>
   getAwayCheck: () => Promise<AwayCheckSettings>
   saveAwayCheck: (awayCheck: AwayCheckSettings) => Promise<boolean>
-  getIdleTime: () => Promise<number>
   openMainWindow: () => Promise<boolean>
-  testNotification: () => Promise<boolean>
+  testNotification: () => Promise<{ success: boolean }>
   testSlack: (webhookUrl: string) => Promise<{ success: boolean; error?: string }>
   onSchedulesUpdated: (callback: (schedules: Schedule[]) => void) => void
   onMemosUpdated: (callback: (memos: Memo[]) => void) => void
   onAwayCheckUpdated: (callback: (awayCheck: AwayCheckSettings) => void) => void
   onIdleStatus: (callback: (data: { idleSeconds: number; limitSeconds: number }) => void) => void
-  checkNotificationPermission: () => Promise<boolean>
   setPinned: (pinned: boolean) => Promise<boolean>
 }
 

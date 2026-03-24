@@ -10,12 +10,7 @@ export default function SettingsTab({ settings, onSave }: SettingsTabProps) {
   const [localSettings, setLocalSettings] = useState<Settings>(settings)
   const [slackTestStatus, setSlackTestStatus] = useState<'idle' | 'loading' | 'success' | 'fail'>('idle')
   const [notifTestStatus, setNotifTestStatus] = useState<'idle' | 'success' | 'denied'>('idle')
-  const [notifPermission, setNotifPermission] = useState<boolean>(true)
   const [saved, setSaved] = useState(false)
-
-  useEffect(() => {
-    window.api.checkNotificationPermission().then(setNotifPermission)
-  }, [])
 
   const update = (patch: Partial<Settings>) => {
     setLocalSettings((prev) => ({ ...prev, ...patch }))
@@ -31,13 +26,12 @@ export default function SettingsTab({ settings, onSave }: SettingsTabProps) {
   const [snackbar, setSnackbar] = useState<string | null>(null)
 
   const handleTestNotification = async () => {
-    const result = await window.api.testNotification() as { success: boolean }
+    const result = await window.api.testNotification()
     if (result.success) {
       setNotifTestStatus('success')
-      setSnackbar('알림이 안 보이면 시스템 설정 → 알림에서 허용해주세요')
+      setSnackbar('알림이 안 보이면: 시스템 설정 → 알림에서 허용해주세요')
     } else {
       setNotifTestStatus('denied')
-      setNotifPermission(false)
     }
     setTimeout(() => setNotifTestStatus('idle'), 3000)
     setTimeout(() => setSnackbar(null), 4000)
@@ -53,18 +47,6 @@ export default function SettingsTab({ settings, onSave }: SettingsTabProps) {
 
   return (
     <div className="settings-tab">
-      {!notifPermission && (
-        <div className="notif-warning">
-          <span className="notif-warning-icon">!</span>
-          <div>
-            <div className="notif-warning-title">macOS 알림이 꺼져 있습니다</div>
-            <div className="notif-warning-desc">
-              시스템 설정 &gt; 알림 &gt; Electron에서 알림을 허용해주세요
-            </div>
-          </div>
-        </div>
-      )}
-
       <div className="settings-section">
         <h3 className="settings-section-title">알림 설정</h3>
 

@@ -341,6 +341,45 @@ input:focus, textarea:focus {
   font-size: 14px;
 }
 
+/* Empty Bell */
+.empty-bell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  padding: 20px 0;
+  opacity: 0;
+  animation: bell-appear 0.6s ease forwards;
+}
+
+.empty-bell-svg {
+  width: 100px;
+  height: 100px;
+  color: #444;
+}
+
+.empty-bell-message {
+  margin-top: 14px;
+  font-size: 14px;
+  color: #555;
+}
+
+@keyframes bell-appear {
+  0% { opacity: 0; transform: scale(0.8) translateY(10px); }
+  60% { opacity: 1; transform: scale(1.05) translateY(-2px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.popup-mode .empty-bell-svg {
+  width: 80px;
+  height: 80px;
+}
+
+.popup-mode .empty-bell-message {
+  font-size: 13px;
+}
+
 /* Memo Tab */
 .memo-tab {
   display: flex;

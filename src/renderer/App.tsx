@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import ScheduleTab from './components/ScheduleTab'
 import MemoTab from './components/MemoTab'
 import AwayCheckTab from './components/AwayCheckTab'

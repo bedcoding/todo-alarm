@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import type { AwayCheckSettings } from '../../types'
 
 interface AwayCheckTabProps {
@@ -10,7 +10,6 @@ export default function AwayCheckTab({ awayCheck, onSave }: AwayCheckTabProps) {
   const [local, setLocal] = useState<AwayCheckSettings>(awayCheck)
   const [idleSeconds, setIdleSeconds] = useState(0)
   const [limitSeconds, setLimitSeconds] = useState(awayCheck.limitMinutes * 60)
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => {
     setLocal(awayCheck)
@@ -22,19 +21,7 @@ export default function AwayCheckTab({ awayCheck, onSave }: AwayCheckTabProps) {
       setIdleSeconds(data.idleSeconds)
       setLimitSeconds(data.limitSeconds)
     })
-
-    // 활성화 상태면 폴링으로도 idle time 가져오기
-    if (local.enabled) {
-      intervalRef.current = setInterval(async () => {
-        const idle = await window.api.getIdleTime()
-        setIdleSeconds(idle)
-      }, 1000)
-    }
-
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current)
-    }
-  }, [local.enabled])
+  }, [])
 
   const update = (patch: Partial<AwayCheckSettings>) => {
     const updated = { ...local, ...patch }

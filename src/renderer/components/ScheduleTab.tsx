@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import Calendar from './Calendar'
+import EmptyBell from './EmptyBell'
 import type { Schedule } from '../../types'
 
 function getToday(): string {
@@ -139,9 +140,11 @@ export default function ScheduleTab({ schedules, onSave, isPopup }: ScheduleTabP
 
         <div className="schedule-list">
           {filteredSchedules.length === 0 ? (
-            <div className="empty">
-              {selectedDate ? '해당 날짜에 일정이 없습니다' : '일정을 추가해보세요'}
-            </div>
+            selectedDate ? (
+              <div className="empty">해당 날짜에 일정이 없습니다</div>
+            ) : (
+              <EmptyBell message="일정을 추가해보세요" />
+            )
           ) : (
             filteredSchedules.map((s) => (
               <div

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import EmptyBell from './EmptyBell'
 import type { Memo } from '../../types'
 
 interface MemoTabProps {
@@ -56,7 +57,7 @@ export default function MemoTab({ memos, onSave }: MemoTabProps) {
       </div>
       <div className="memo-list">
         {memos.length === 0 ? (
-          <div className="empty">메모를 추가해보세요</div>
+          <EmptyBell message="메모를 추가해보세요" />
         ) : (
           memos.map((m) => (
             <div key={m.id} className="memo-item">

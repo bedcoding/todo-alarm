@@ -9,7 +9,6 @@ contextBridge.exposeInMainWorld('api', {
   saveSettings: (settings: unknown) => ipcRenderer.invoke('save-settings', settings),
   getAwayCheck: () => ipcRenderer.invoke('get-away-check'),
   saveAwayCheck: (awayCheck: unknown) => ipcRenderer.invoke('save-away-check', awayCheck),
-  getIdleTime: () => ipcRenderer.invoke('get-idle-time'),
   openMainWindow: () => ipcRenderer.invoke('open-main-window'),
   testNotification: () => ipcRenderer.invoke('test-notification'),
   testSlack: (webhookUrl: string) => ipcRenderer.invoke('test-slack', webhookUrl),
@@ -25,6 +24,5 @@ contextBridge.exposeInMainWorld('api', {
   onIdleStatus: (callback: (data: unknown) => void) => {
     ipcRenderer.on('idle-status', (_, data) => callback(data))
   },
-  checkNotificationPermission: () => ipcRenderer.invoke('check-notification-permission'),
   setPinned: (pinned: boolean) => ipcRenderer.invoke('set-pinned', pinned)
 })
