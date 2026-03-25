@@ -183,7 +183,7 @@ function sendToAllWindows(channel: string, data: unknown): void {
   windows.forEach((w) => w.webContents.send(channel, data))
 }
 
-async function sendSlackNotification(webhookUrl: string, message: string): Promise<boolean> {
+async function sendSlackWebhook(webhookUrl: string, message: string): Promise<boolean> {
   try {
     const response = await net.fetch(webhookUrl, {
       method: 'POST',
@@ -194,6 +194,30 @@ async function sendSlackNotification(webhookUrl: string, message: string): Promi
   } catch {
     return false
   }
+}
+
+async function sendSlackBot(botToken: string, channelId: string, message: string): Promise<boolean> {
+  try {
+    const response = await net.fetch('https://slack.com/api/chat.postMessage', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${botToken}`
+      },
+      body: JSON.stringify({ channel: channelId, text: message })
+    })
+    const data = (await response.json()) as { ok: boolean }
+    return data.ok
+  } catch {
+    return false
+  }
+}
+
+function sendSlackNotification(settings: Settings, message: string): Promise<boolean> {
+  if (settings.slackMethod === 'bot') {
+    return sendSlackBot(settings.slackBotToken, settings.slackChannelId, message)
+  }
+  return sendSlackWebhook(settings.slackWebhookUrl, message)
 }
 
 function startAlarmChecker(): void {
@@ -225,9 +249,9 @@ function startAlarmChecker(): void {
           }).show()
         }
 
-        if (settings.slackEnabled && settings.slackWebhookUrl) {
+        if (settings.slackEnabled) {
           sendSlackNotification(
-            settings.slackWebhookUrl,
+            settings,
             `📌 *일정 알림${timingText}*\n${schedule.content}\n📅 ${schedule.date} ${schedule.time}`
           )
         }
@@ -278,9 +302,9 @@ function startAwayChecker(): void {
           }).show()
         }
 
-        if (current.settings.slackEnabled && current.settings.slackWebhookUrl) {
+        if (current.settings.slackEnabled) {
           sendSlackNotification(
-            current.settings.slackWebhookUrl,
+            current.settings,
             `⚠️ *이석 경고!* ${current.awayCheck.limitMinutes}분 이상 자리를 비웠습니다!`
           )
         }
@@ -385,9 +409,12 @@ ipcMain.handle('test-notification', () => {
   })
 })
 
-ipcMain.handle('test-slack', async (_, webhookUrl: string) => {
+ipcMain.handle('test-slack', async (_, config: { method: string; webhookUrl: string; botToken: string; channelId: string }) => {
   try {
-    const success = await sendSlackNotification(webhookUrl, '🔔 *Todo Alarm 테스트*\nSlack 알림이 정상적으로 연결되었습니다!')
+    const message = '🔔 *Todo Alarm 테스트*\nSlack 알림이 정상적으로 연결되었습니다!'
+    const success = config.method === 'bot'
+      ? await sendSlackBot(config.botToken, config.channelId, message)
+      : await sendSlackWebhook(config.webhookUrl, message)
     return { success }
   } catch {
     return { success: false, error: '전송 실패' }

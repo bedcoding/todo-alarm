@@ -631,6 +631,33 @@ input:focus, textarea:focus {
   height: 100%;
 }
 
+.sub-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid #2a3a5c;
+}
+
+.sub-tab {
+  flex: 1;
+  padding: 8px 0;
+  background: none;
+  border: none;
+  color: #8899aa;
+  font-size: 13px;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: color 0.2s, border-color 0.2s;
+}
+
+.sub-tab:hover {
+  color: #ccc;
+}
+
+.sub-tab.active {
+  color: #e94560;
+  border-bottom-color: #e94560;
+}
+
 .settings-section {
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.06);

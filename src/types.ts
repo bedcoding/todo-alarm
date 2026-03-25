@@ -13,11 +13,16 @@ export interface Memo {
   createdAt: string
 }
 
+export type SlackMethod = 'webhook' | 'bot'
+
 export interface Settings {
   checkInterval: number // ms (30000, 60000, 300000)
   macNotification: boolean
   slackEnabled: boolean
+  slackMethod: SlackMethod
   slackWebhookUrl: string
+  slackBotToken: string
+  slackChannelId: string
   alertTiming: number // 분 단위 (0 = 정시, 5, 10, 30)
 }
 
@@ -25,7 +30,10 @@ export const DEFAULT_SETTINGS: Settings = {
   checkInterval: 30000,
   macNotification: true,
   slackEnabled: false,
+  slackMethod: 'webhook',
   slackWebhookUrl: '',
+  slackBotToken: '',
+  slackChannelId: '',
   alertTiming: 0
 }
 
@@ -57,7 +65,7 @@ export interface ElectronAPI {
   saveAwayCheck: (awayCheck: AwayCheckSettings) => Promise<boolean>
   openMainWindow: () => Promise<boolean>
   testNotification: () => Promise<{ success: boolean }>
-  testSlack: (webhookUrl: string) => Promise<{ success: boolean; error?: string }>
+  testSlack: (config: { method: SlackMethod; webhookUrl: string; botToken: string; channelId: string }) => Promise<{ success: boolean; error?: string }>
   onSchedulesUpdated: (callback: (schedules: Schedule[]) => void) => void
   onMemosUpdated: (callback: (memos: Memo[]) => void) => void
   onAwayCheckUpdated: (callback: (awayCheck: AwayCheckSettings) => void) => void
