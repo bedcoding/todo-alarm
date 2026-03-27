@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useCallback } from 'react'
 import type { Settings } from '../../types'
 
 interface SettingsTabProps {
@@ -10,22 +10,26 @@ type SubTab = 'notification' | 'slack'
 
 export default function SettingsTab({ settings, onSave }: SettingsTabProps) {
   const [subTab, setSubTab] = useState<SubTab>('notification')
-  const [localSettings, setLocalSettings] = useState<Settings>(settings)
   const [notifTestStatus, setNotifTestStatus] = useState<'idle' | 'success' | 'denied'>('idle')
   const [slackTestStatus, setSlackTestStatus] = useState<'idle' | 'loading' | 'success' | 'fail'>('idle')
-  const [saved, setSaved] = useState(false)
   const [snackbar, setSnackbar] = useState<string | null>(null)
+  const [textEdits, setTextEdits] = useState<Partial<Settings>>({})
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>()
 
   const update = (patch: Partial<Settings>) => {
-    setLocalSettings((prev) => ({ ...prev, ...patch }))
-    setSaved(false)
+    onSave({ ...settings, ...patch })
   }
 
-  const handleSave = () => {
-    onSave(localSettings)
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
-  }
+  const updateText = useCallback((patch: Partial<Settings>) => {
+    setTextEdits((prev) => ({ ...prev, ...patch }))
+    clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => {
+      onSave({ ...settings, ...textEdits, ...patch })
+      setTextEdits({})
+    }, 500)
+  }, [settings, textEdits, onSave])
+
+  const mergedSettings = { ...settings, ...textEdits }
 
   const handleTestNotification = async () => {
     const result = await window.api.testNotification()
@@ -40,7 +44,7 @@ export default function SettingsTab({ settings, onSave }: SettingsTabProps) {
   }
 
   const handleTestSlack = async () => {
-    const { slackMethod, slackWebhookUrl, slackBotToken, slackChannelId } = localSettings
+    const { slackMethod, slackWebhookUrl, slackBotToken, slackChannelId } = settings
     if (slackMethod === 'webhook' && !slackWebhookUrl.trim()) return
     if (slackMethod === 'bot' && (!slackBotToken.trim() || !slackChannelId.trim())) return
     setSlackTestStatus('loading')
@@ -76,7 +80,7 @@ export default function SettingsTab({ settings, onSave }: SettingsTabProps) {
           <div className="settings-row">
             <label>체크 주기</label>
             <select
-              value={localSettings.checkInterval}
+              value={settings.checkInterval}
               onChange={(e) => update({ checkInterval: Number(e.target.value) })}
             >
               <option value={30000}>30초</option>
@@ -88,7 +92,7 @@ export default function SettingsTab({ settings, onSave }: SettingsTabProps) {
           <div className="settings-row">
             <label>알림 타이밍</label>
             <select
-              value={localSettings.alertTiming}
+              value={settings.alertTiming}
               onChange={(e) => update({ alertTiming: Number(e.target.value) })}
             >
               <option value={0}>정시</option>
@@ -101,8 +105,8 @@ export default function SettingsTab({ settings, onSave }: SettingsTabProps) {
           <div className="settings-row">
             <label>macOS 알림</label>
             <div
-              className={`toggle ${localSettings.macNotification ? 'on' : ''}`}
-              onClick={() => update({ macNotification: !localSettings.macNotification })}
+              className={`toggle ${settings.macNotification ? 'on' : ''}`}
+              onClick={() => update({ macNotification: !settings.macNotification })}
             >
               <div className="toggle-knob" />
             </div>
@@ -123,19 +127,19 @@ export default function SettingsTab({ settings, onSave }: SettingsTabProps) {
           <div className="settings-row">
             <label>Slack 알림</label>
             <div
-              className={`toggle ${localSettings.slackEnabled ? 'on' : ''}`}
-              onClick={() => update({ slackEnabled: !localSettings.slackEnabled })}
+              className={`toggle ${settings.slackEnabled ? 'on' : ''}`}
+              onClick={() => update({ slackEnabled: !settings.slackEnabled })}
             >
               <div className="toggle-knob" />
             </div>
           </div>
 
-          {localSettings.slackEnabled && (
+          {settings.slackEnabled && (
             <>
               <div className="settings-row">
                 <label>연동 방식</label>
                 <select
-                  value={localSettings.slackMethod}
+                  value={settings.slackMethod}
                   onChange={(e) => update({ slackMethod: e.target.value as 'webhook' | 'bot' })}
                 >
                   <option value="webhook">Webhook URL</option>
@@ -143,14 +147,14 @@ export default function SettingsTab({ settings, onSave }: SettingsTabProps) {
                 </select>
               </div>
 
-              {localSettings.slackMethod === 'webhook' ? (
+              {settings.slackMethod === 'webhook' ? (
                 <div className="settings-row vertical">
                   <label>Webhook URL</label>
                   <input
                     type="text"
                     placeholder="https://hooks.slack.com/services/T.../B.../xxx"
-                    value={localSettings.slackWebhookUrl}
-                    onChange={(e) => update({ slackWebhookUrl: e.target.value })}
+                    value={mergedSettings.slackWebhookUrl}
+                    onChange={(e) => updateText({ slackWebhookUrl: e.target.value })}
                     className="webhook-input"
                   />
                 </div>
@@ -161,8 +165,8 @@ export default function SettingsTab({ settings, onSave }: SettingsTabProps) {
                     <input
                       type="text"
                       placeholder="xoxb-..."
-                      value={localSettings.slackBotToken}
-                      onChange={(e) => update({ slackBotToken: e.target.value })}
+                      value={mergedSettings.slackBotToken}
+                      onChange={(e) => updateText({ slackBotToken: e.target.value })}
                       className="webhook-input"
                     />
                   </div>
@@ -171,8 +175,8 @@ export default function SettingsTab({ settings, onSave }: SettingsTabProps) {
                     <input
                       type="text"
                       placeholder="C01XXXXXXXX"
-                      value={localSettings.slackChannelId}
-                      onChange={(e) => update({ slackChannelId: e.target.value })}
+                      value={mergedSettings.slackChannelId}
+                      onChange={(e) => updateText({ slackChannelId: e.target.value })}
                       className="webhook-input"
                     />
                   </div>
@@ -184,9 +188,9 @@ export default function SettingsTab({ settings, onSave }: SettingsTabProps) {
                   className="test-slack-btn"
                   onClick={handleTestSlack}
                   disabled={slackTestStatus === 'loading' || (
-                    localSettings.slackMethod === 'webhook'
-                      ? !localSettings.slackWebhookUrl.trim()
-                      : !localSettings.slackBotToken.trim() || !localSettings.slackChannelId.trim()
+                    settings.slackMethod === 'webhook'
+                      ? !settings.slackWebhookUrl.trim()
+                      : !settings.slackBotToken.trim() || !settings.slackChannelId.trim()
                   )}
                 >
                   {slackTestStatus === 'loading' && '전송 중...'}
@@ -199,12 +203,6 @@ export default function SettingsTab({ settings, onSave }: SettingsTabProps) {
           )}
         </div>
       )}
-
-      <div className="settings-footer">
-        <button className="save-settings-btn" onClick={handleSave}>
-          {saved ? '저장 완료!' : '설정 저장'}
-        </button>
-      </div>
 
       {snackbar && (
         <div className="snackbar">{snackbar}</div>

@@ -31,7 +31,7 @@ Todo Alarm에서 Slack 알림을 받기 위한 설정 방법입니다.
 
 ---
 
-# 방법 A: Webhook URL (간단)
+# 방법 A: Webhook URL 방식
 
 ## 3. Incoming Webhooks 활성화 및 URL 발급
 
@@ -59,7 +59,7 @@ https://hooks.slack.com/services/TXXXXX/BXXXXX/XXXXXX
 
 ---
 
-# 방법 B: Bot Token
+# 방법 B: Bot Token 방식
 
 Bot Token은 여러 채널에 메시지를 보낼 수 있고, 채널 ID만 바꾸면 됩니다.
 

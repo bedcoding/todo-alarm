@@ -123,12 +123,18 @@ export default function App() {
         )}
       </div>
       <div className="content">
-        {activeTab === 'schedule' && (
+        <div className={`tab-panel ${activeTab === 'schedule' ? 'active' : ''}`}>
           <ScheduleTab schedules={schedules} onSave={saveSchedules} isPopup={isPopup} />
-        )}
-        {activeTab === 'memo' && <MemoTab memos={memos} onSave={saveMemos} />}
-        {activeTab === 'awaycheck' && <AwayCheckTab awayCheck={awayCheck} onSave={saveAwayCheck} />}
-        {activeTab === 'settings' && <SettingsTab settings={settings} onSave={saveSettings} />}
+        </div>
+        <div className={`tab-panel ${activeTab === 'memo' ? 'active' : ''}`}>
+          <MemoTab memos={memos} onSave={saveMemos} />
+        </div>
+        <div className={`tab-panel ${activeTab === 'awaycheck' ? 'active' : ''}`}>
+          <AwayCheckTab awayCheck={awayCheck} onSave={saveAwayCheck} />
+        </div>
+        <div className={`tab-panel ${activeTab === 'settings' ? 'active' : ''}`}>
+          <SettingsTab settings={settings} onSave={saveSettings} />
+        </div>
       </div>
     </div>
   )
