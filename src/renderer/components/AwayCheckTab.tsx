@@ -86,17 +86,34 @@ export default function AwayCheckTab({ awayCheck, onSave }: AwayCheckTabProps) {
 
         <div className="settings-row">
           <label>제한 시간</label>
-          <div className="away-check-time-buttons">
-            {[5, 10, 15, 20].map((m) => (
-              <button
-                key={m}
-                className={`away-time-btn ${local.limitMinutes === m ? 'active' : ''}`}
-                onClick={() => update({ limitMinutes: m })}
-              >
-                {m}분
-              </button>
-            ))}
+          <div className="away-check-limit-input">
+            <button
+              className="limit-btn"
+              onClick={() => update({ limitMinutes: Math.max(1, Math.floor((local.limitMinutes - 1) / 5) * 5) })}
+            >
+              −
+            </button>
+            <input
+              type="text"
+              inputMode="numeric"
+              className="limit-value-input"
+              value={local.limitMinutes}
+              onChange={(e) => {
+                const v = Number(e.target.value.replace(/\D/g, ''))
+                if (v >= 0) update({ limitMinutes: Math.max(1, Math.min(120, v || 1)) })
+              }}
+            />
+            <span className="limit-unit">분</span>
+            <button
+              className="limit-btn"
+              onClick={() => update({ limitMinutes: Math.min(120, Math.ceil((local.limitMinutes + 1) / 5) * 5) })}
+            >
+              +
+            </button>
           </div>
+        </div>
+        <div className="away-check-limit-desc">
+          {local.limitMinutes}분 초과 시 자리비움 경고 알림이 발송됩니다
         </div>
 
       </div>
@@ -108,6 +125,9 @@ export default function AwayCheckTab({ awayCheck, onSave }: AwayCheckTabProps) {
             : isWarning
             ? '⏰ 곧 시간이 초과됩니다!'
             : '키보드/마우스 입력 시 타이머가 초기화됩니다'}
+          <div className="away-check-hint">
+            * 주의: 어떤 이석체크 프로그램은 키보드만 감지함 (타이핑 권장)
+          </div>
         </div>
       )}
     </div>
