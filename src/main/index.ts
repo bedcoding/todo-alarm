@@ -149,6 +149,9 @@ function togglePopup(): void {
     Math.max(display.workArea.x, Math.min(x, display.workArea.x + display.workArea.width - windowBounds.width)),
     Math.max(display.workArea.y, Math.min(y, display.workArea.y + display.workArea.height - windowBounds.height))
   )
+  if (process.platform === 'darwin') {
+    popupWindow!.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
+  }
   popupWindow!.show()
   popupWindow!.focus()
 }
