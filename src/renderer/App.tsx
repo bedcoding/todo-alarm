@@ -124,7 +124,7 @@ export default function App() {
       </div>
       <div className="content">
         <div className={`tab-panel ${activeTab === 'schedule' ? 'active' : ''}`}>
-          <ScheduleTab schedules={schedules} onSave={saveSchedules} isPopup={isPopup} />
+          <ScheduleTab schedules={schedules} onSave={saveSchedules} settings={settings} onSettingsChange={(patch) => saveSettings({ ...settings, ...patch })} isPopup={isPopup} />
         </div>
         <div className={`tab-panel ${activeTab === 'memo' ? 'active' : ''}`}>
           <MemoTab memos={memos} onSave={saveMemos} />

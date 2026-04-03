@@ -10,7 +10,8 @@ export default function AwayCheckTab({ awayCheck, onSave }: AwayCheckTabProps) {
   const [local, setLocal] = useState<AwayCheckSettings>(awayCheck)
   const [idleSeconds, setIdleSeconds] = useState(0)
   const [limitSeconds, setLimitSeconds] = useState(awayCheck.limitMinutes * 60)
-
+  const [showSettings, setShowSettings] = useState(false)
+  const [notifTest, setNotifTest] = useState<'idle' | 'success' | 'denied'>('idle')
 
   useEffect(() => {
     setLocal(awayCheck)
@@ -42,8 +43,7 @@ export default function AwayCheckTab({ awayCheck, onSave }: AwayCheckTabProps) {
       <div className="away-check-help">
         <span className="help-icon">?</span>
         <div className="help-tooltip">
-          키보드/마우스 입력 시 타이머가 초기화됩니다.<br />
-          키보드 입력이 더 정확하게 감지됩니다.
+          키보드나 마우스의 동작이 감지되면 타이머가 초기화됩니다.<br />
         </div>
       </div>
       <div className="away-check-timer-section">
@@ -122,17 +122,59 @@ export default function AwayCheckTab({ awayCheck, onSave }: AwayCheckTabProps) {
         </div>
       </div>
 
-      {local.enabled && (isOver || isWarning) && (
-        <div className="away-check-info">
-          {isOver
-            ? '⚠️ 자리 비운 시간이 초과되었습니다!'
-            : '⏰ 곧 시간이 초과됩니다!'}
-        </div>
+      <button className="inline-settings-toggle" onClick={() => setShowSettings(true)}>
+        알림 설정
+      </button>
+
+      {showSettings && (
+        <>
+          <div className="picker-overlay" onClick={() => setShowSettings(false)} />
+          <div className="settings-modal">
+            <div className="settings-modal-title">알림 설정</div>
+            <div className="settings-row compact">
+              <label>점심시간 제외</label>
+              <div
+                className={`toggle ${local.excludeLunch ? 'on' : ''}`}
+                onClick={() => update({ excludeLunch: !local.excludeLunch })}
+              >
+                <div className="toggle-knob" />
+              </div>
+            </div>
+            {local.excludeLunch && (
+              <div className="time-range no-border">
+                <input type="time" value={local.lunchStart} onChange={(e) => update({ lunchStart: e.target.value })} className="time-input" />
+                <span>~</span>
+                <input type="time" value={local.lunchEnd} onChange={(e) => update({ lunchEnd: e.target.value })} className="time-input" />
+              </div>
+            )}
+            <div className="settings-row compact">
+              <label>퇴근 후 제외</label>
+              <div
+                className={`toggle ${local.excludeAfterWork ? 'on' : ''}`}
+                onClick={() => update({ excludeAfterWork: !local.excludeAfterWork })}
+              >
+                <div className="toggle-knob" />
+              </div>
+            </div>
+            {local.excludeAfterWork && (
+              <div className="time-range no-border">
+                <input type="time" value={local.afterWorkTime} onChange={(e) => update({ afterWorkTime: e.target.value })} className="time-input" />
+              </div>
+            )}
+            <div className="settings-row">
+              <button className="test-notification-btn" onClick={async () => {
+                const result = await window.api.testNotification()
+                setNotifTest(result.success ? 'success' : 'denied')
+                setTimeout(() => setNotifTest('idle'), 3000)
+              }}>
+                {notifTest === 'success' ? '알림 전송됨' : notifTest === 'denied' ? '알림 차단됨' : '알림 테스트'}
+              </button>
+            </div>
+            <button className="picker-close-btn" onClick={() => setShowSettings(false)}>닫기</button>
+          </div>
+        </>
       )}
 
-      <div className="away-check-bottom-desc">
-        {local.limitMinutes}분 초과 시 자리비움 경고 알림이 발송됩니다
-      </div>
     </div>
   )
 }

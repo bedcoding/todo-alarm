@@ -2,7 +2,7 @@ import { useState } from 'react'
 import Calendar from './Calendar'
 import EmptyBell from './EmptyBell'
 import TimePicker from './TimePicker'
-import type { Schedule } from '../../types'
+import type { Schedule, Settings } from '../../types'
 
 function getToday(): string {
   const d = new Date()
@@ -17,10 +17,12 @@ function getNowTime(): string {
 interface ScheduleTabProps {
   schedules: Schedule[]
   onSave: (schedules: Schedule[]) => void
+  settings: Settings
+  onSettingsChange: (patch: Partial<Settings>) => void
   isPopup: boolean
 }
 
-export default function ScheduleTab({ schedules, onSave, isPopup }: ScheduleTabProps) {
+export default function ScheduleTab({ schedules, onSave, settings, onSettingsChange, isPopup }: ScheduleTabProps) {
   const [date, setDate] = useState(getToday)
   const [time, setTime] = useState(getNowTime)
   const [content, setContent] = useState('')
@@ -28,6 +30,8 @@ export default function ScheduleTab({ schedules, onSave, isPopup }: ScheduleTabP
   const [showCalendar, setShowCalendar] = useState(false)
   const [showTimePicker, setShowTimePicker] = useState(false)
   const [showDatePicker, setShowDatePicker] = useState(false)
+  const [showSettings, setShowSettings] = useState(false)
+  const [notifTest, setNotifTest] = useState<'idle' | 'success' | 'denied'>('idle')
 
   const addSchedule = () => {
     if (!date || !time || !content.trim()) return
@@ -190,6 +194,7 @@ export default function ScheduleTab({ schedules, onSave, isPopup }: ScheduleTabP
             ))
           )}
         </div>
+
       </div>
 
       {!isPopup && (
@@ -200,6 +205,70 @@ export default function ScheduleTab({ schedules, onSave, isPopup }: ScheduleTabP
             onSelectDate={(d) => setSelectedDate(d === selectedDate ? null : d)}
           />
         </div>
+      )}
+
+      <button className="inline-settings-toggle" onClick={() => setShowSettings(true)}>
+        알림 설정
+      </button>
+
+      {showSettings && (
+        <>
+          <div className="picker-overlay" onClick={() => setShowSettings(false)} />
+          <div className="settings-modal">
+            <div className="settings-modal-title">알림 설정</div>
+            <div className="settings-row">
+              <label>macOS 알림</label>
+              <div
+                className={`toggle ${settings.macNotification ? 'on' : ''}`}
+                onClick={() => onSettingsChange({ macNotification: !settings.macNotification })}
+              >
+                <div className="toggle-knob" />
+              </div>
+            </div>
+            <div className="settings-row">
+              <label>알림 타이밍</label>
+              <select
+                value={settings.alertTiming}
+                onChange={(e) => onSettingsChange({ alertTiming: Number(e.target.value) })}
+              >
+                <option value={0}>정시</option>
+                <option value={5}>5분 전</option>
+                <option value={10}>10분 전</option>
+                <option value={30}>30분 전</option>
+              </select>
+            </div>
+            <div className="settings-row">
+              <label>하루 시작 알림</label>
+              <div
+                className={`toggle ${settings.morningAlertEnabled ? 'on' : ''}`}
+                onClick={() => onSettingsChange({ morningAlertEnabled: !settings.morningAlertEnabled })}
+              >
+                <div className="toggle-knob" />
+              </div>
+            </div>
+            {settings.morningAlertEnabled && (
+              <div className="settings-row">
+                <label>알림 시각</label>
+                <input
+                  type="time"
+                  value={settings.morningAlertTime}
+                  onChange={(e) => onSettingsChange({ morningAlertTime: e.target.value })}
+                  className="time-input"
+                />
+              </div>
+            )}
+            <div className="settings-row">
+              <button className="test-notification-btn" onClick={async () => {
+                const result = await window.api.testNotification()
+                setNotifTest(result.success ? 'success' : 'denied')
+                setTimeout(() => setNotifTest('idle'), 3000)
+              }}>
+                {notifTest === 'success' ? '알림 전송됨' : notifTest === 'denied' ? '알림 차단됨' : '알림 테스트'}
+              </button>
+            </div>
+            <button className="picker-close-btn" onClick={() => setShowSettings(false)}>닫기</button>
+          </div>
+        </>
       )}
     </div>
   )

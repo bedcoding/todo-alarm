@@ -18,33 +18,47 @@ export type SlackMethod = 'webhook' | 'bot'
 export interface Settings {
   checkInterval: number // ms (30000, 60000, 300000)
   macNotification: boolean
+  alertTiming: number // 분 단위 (0 = 정시, 5, 10, 30)
+  morningAlertEnabled: boolean
+  morningAlertTime: string // "09:00" 형식
   slackEnabled: boolean
   slackMethod: SlackMethod
   slackWebhookUrl: string
   slackBotToken: string
   slackChannelId: string
-  alertTiming: number // 분 단위 (0 = 정시, 5, 10, 30)
 }
 
 export const DEFAULT_SETTINGS: Settings = {
   checkInterval: 30000,
   macNotification: true,
+  alertTiming: 0,
+  morningAlertEnabled: false,
+  morningAlertTime: '09:00',
   slackEnabled: false,
   slackMethod: 'webhook',
   slackWebhookUrl: '',
   slackBotToken: '',
   slackChannelId: '',
-  alertTiming: 0
 }
 
 export interface AwayCheckSettings {
   enabled: boolean
-  limitMinutes: number // 5, 10, 15, 20
+  limitMinutes: number
+  excludeLunch: boolean
+  lunchStart: string // "12:00"
+  lunchEnd: string   // "13:00"
+  excludeAfterWork: boolean
+  afterWorkTime: string // "18:00"
 }
 
 export const DEFAULT_AWAY_CHECK: AwayCheckSettings = {
   enabled: false,
-  limitMinutes: 20
+  limitMinutes: 20,
+  excludeLunch: false,
+  lunchStart: '12:00',
+  lunchEnd: '13:00',
+  excludeAfterWork: false,
+  afterWorkTime: '18:00',
 }
 
 export interface AppData {

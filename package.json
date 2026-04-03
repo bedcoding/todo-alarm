@@ -32,6 +32,10 @@
     "mac": {
       "target": "dmg"
     },
+    "win": {
+      "target": ["nsis", "portable"],
+      "icon": "resources/icon.ico"
+    },
     "files": [
       "out/**/*",
       "resources/**/*"

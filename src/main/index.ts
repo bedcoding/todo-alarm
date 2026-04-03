@@ -30,6 +30,7 @@ let mainWindow: BrowserWindow | null = null
 let alarmIntervalId: ReturnType<typeof setInterval> | null = null
 let awayCheckIntervalId: ReturnType<typeof setInterval> | null = null
 let awayAlertSent = false
+let morningAlertSentDate = ''
 let lastBlurTime = 0
 let popupPinned = false
 
@@ -233,6 +234,31 @@ function startAlarmChecker(): void {
     const now = new Date()
     let updated = false
 
+    // 하루 시작 알림
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+    if (settings.morningAlertEnabled && morningAlertSentDate !== todayStr) {
+      const [mh, mm] = settings.morningAlertTime.split(':').map(Number)
+      const morningTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), mh, mm)
+      const morningDiff = now.getTime() - morningTime.getTime()
+      if (morningDiff >= 0 && morningDiff < 120000) {
+        const todaySchedules = data.schedules.filter((s) => s.date === todayStr)
+        if (todaySchedules.length > 0) {
+          const body = todaySchedules.map((s) => `${s.time} ${s.content}`).join('\n')
+          if (settings.macNotification) {
+            new Notification({
+              title: `📋 오늘 일정 (${todaySchedules.length}건)`,
+              body,
+              sound: 'default'
+            }).show()
+          }
+          if (settings.slackEnabled) {
+            sendSlackNotification(settings, `📋 *오늘 일정 (${todaySchedules.length}건)*\n${body}`)
+          }
+        }
+        morningAlertSentDate = todayStr
+      }
+    }
+
     data.schedules.forEach((schedule) => {
       if (schedule.notified) return
 
@@ -292,6 +318,27 @@ function startAwayChecker(): void {
 
     // UI에 현재 상태 전송
     sendToAllWindows('idle-status', { idleSeconds, limitSeconds: current.awayCheck.limitMinutes * 60 })
+
+    // 제외 시간대 체크
+    const now = new Date()
+    const currentMinutes = now.getHours() * 60 + now.getMinutes()
+    const { excludeLunch, lunchStart, lunchEnd, excludeAfterWork, afterWorkTime } = current.awayCheck
+
+    if (excludeLunch) {
+      const [lsh, lsm] = lunchStart.split(':').map(Number)
+      const [leh, lem] = lunchEnd.split(':').map(Number)
+      if (currentMinutes >= lsh * 60 + lsm && currentMinutes < leh * 60 + lem) {
+        awayAlertSent = false
+        return
+      }
+    }
+    if (excludeAfterWork) {
+      const [awh, awm] = afterWorkTime.split(':').map(Number)
+      if (currentMinutes >= awh * 60 + awm) {
+        awayAlertSent = false
+        return
+      }
+    }
 
     if (idleSeconds >= current.awayCheck.limitMinutes * 60) {
       if (!awayAlertSent) {
