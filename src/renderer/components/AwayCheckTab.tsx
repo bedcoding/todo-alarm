@@ -124,9 +124,9 @@ export default function AwayCheckTab({ awayCheck, onSave }: AwayCheckTabProps) {
             ? '⚠️ 자리 비운 시간이 초과되었습니다!'
             : isWarning
             ? '⏰ 곧 시간이 초과됩니다!'
-            : '키보드/마우스 입력 시 타이머가 초기화됩니다'}
+            : '키보드/마우스 입력 시 타이머가 초기화됩니다.'}
           <div className="away-check-hint">
-            * 주의: 어떤 이석체크 프로그램은 키보드만 감지함 (타이핑 권장)
+            * 키보드 입력의 감지 정확도가 더 높습니다.
           </div>
         </div>
       )}

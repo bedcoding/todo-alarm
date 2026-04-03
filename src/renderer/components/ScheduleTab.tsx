@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import Calendar from './Calendar'
 import EmptyBell from './EmptyBell'
+import TimePicker from './TimePicker'
 import type { Schedule } from '../../types'
 
 function getToday(): string {
@@ -25,6 +26,8 @@ export default function ScheduleTab({ schedules, onSave, isPopup }: ScheduleTabP
   const [content, setContent] = useState('')
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
   const [showCalendar, setShowCalendar] = useState(false)
+  const [showTimePicker, setShowTimePicker] = useState(false)
+  const [showDatePicker, setShowDatePicker] = useState(false)
 
   const addSchedule = () => {
     if (!date || !time || !content.trim()) return
@@ -70,10 +73,7 @@ export default function ScheduleTab({ schedules, onSave, isPopup }: ScheduleTabP
 
   const formatTime = (timeStr: string): string => {
     const [h, m] = timeStr.split(':')
-    const hour = parseInt(h)
-    const period = hour < 12 ? '오전' : '오후'
-    const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour
-    return `${period} ${displayHour}시${m !== '00' ? ` ${m}분` : ''}`
+    return `${h}:${m}`
   }
 
   const isPast = (datetime: string): boolean => new Date(datetime) < new Date()
@@ -82,21 +82,43 @@ export default function ScheduleTab({ schedules, onSave, isPopup }: ScheduleTabP
     <div className={`schedule-tab ${isPopup ? 'popup-layout' : ''}`}>
       <div className="schedule-left">
         <div className={`input-area ${isPopup ? 'popup-input' : ''}`}>
-          <div className="input-row">
-            <input
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              onKeyDown={handleKeyDown}
-            />
-            <input
-              type="time"
-              value={time}
-              onChange={(e) => setTime(e.target.value)}
-              onKeyDown={handleKeyDown}
-            />
+          <div className={`input-row ${isPopup ? 'picker-anchor' : ''}`}>
+            <button
+              className="date-picker-btn"
+              onClick={() => { setShowDatePicker(!showDatePicker); setShowTimePicker(false) }}
+            >
+              {formatDisplayDate(date)}
+            </button>
+            <button
+              className="time-picker-btn"
+              onClick={() => { setShowTimePicker(!showTimePicker); setShowDatePicker(false) }}
+            >
+              {time}
+            </button>
+            {showDatePicker && (
+              <>
+                <div className="picker-overlay" onClick={() => setShowDatePicker(false)} />
+                <div className={`picker-dropdown ${isPopup ? 'picker-inline' : 'picker-center'}`}>
+                  <Calendar
+                    scheduleDates={scheduleDates}
+                    selectedDate={date}
+                    onSelectDate={(d) => { setDate(d); setShowDatePicker(false) }}
+                  />
+                  <button className="picker-close-btn" onClick={() => setShowDatePicker(false)}>닫기</button>
+                </div>
+              </>
+            )}
+            {showTimePicker && (
+              <>
+                <div className="picker-overlay" onClick={() => setShowTimePicker(false)} />
+                <div className={`picker-dropdown ${isPopup ? 'picker-inline' : 'picker-center'}`}>
+                  <TimePicker value={time} onChange={setTime} />
+                  <button className="picker-close-btn" onClick={() => setShowTimePicker(false)}>닫기</button>
+                </div>
+              </>
+            )}
           </div>
-          <div className="input-row">
+          <div className={`input-row ${isPopup ? 'picker-anchor' : ''}`}>
             <input
               type="text"
               placeholder="일정 내용"
@@ -108,26 +130,31 @@ export default function ScheduleTab({ schedules, onSave, isPopup }: ScheduleTabP
               추가
             </button>
             {isPopup && (
-              <button
-                className={`calendar-toggle-btn ${showCalendar ? 'active' : ''}`}
-                onClick={() => setShowCalendar(!showCalendar)}
-                title="달력 보기"
-              >
-                📅
-              </button>
+              <>
+                <button
+                  className={`calendar-toggle-btn ${showCalendar ? 'active' : ''}`}
+                  onClick={() => setShowCalendar(!showCalendar)}
+                  title="일정 조회"
+                >
+                  📅
+                </button>
+                {showCalendar && (
+                  <>
+                    <div className="picker-overlay" onClick={() => setShowCalendar(false)} />
+                    <div className="view-calendar-wrapper">
+                      <Calendar
+                        scheduleDates={scheduleDates}
+                        selectedDate={selectedDate}
+                        onSelectDate={(d) => setSelectedDate(d === selectedDate ? null : d)}
+                      />
+                      <button className="picker-close-btn" onClick={() => setShowCalendar(false)}>닫기</button>
+                    </div>
+                  </>
+                )}
+              </>
             )}
           </div>
         </div>
-
-        {isPopup && showCalendar && (
-          <div className="popup-calendar">
-            <Calendar
-              scheduleDates={scheduleDates}
-              selectedDate={selectedDate}
-              onSelectDate={(d) => setSelectedDate(d === selectedDate ? null : d)}
-            />
-          </div>
-        )}
 
         {selectedDate && (
           <div className="filter-info">

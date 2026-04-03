@@ -132,11 +132,58 @@ body {
   flex-shrink: 0;
 }
 
+.schedule-right .calendar {
+  background: #e8edf5;
+  color: #1a1a2e;
+  border: 1px solid #ccc;
+}
+
+.schedule-right .calendar-header {
+  color: #1a1a2e;
+}
+
+.schedule-right .calendar-header button {
+  color: #666;
+}
+
+.schedule-right .calendar-header button:hover {
+  color: #1a1a2e;
+  background: #d0d8e8;
+}
+
+.schedule-right .weekday {
+  color: #888;
+}
+
+.schedule-right .calendar-day {
+  color: #1a1a2e;
+}
+
+.schedule-right .calendar-day:not(.empty):hover {
+  background: #d0d8e8;
+}
+
+.schedule-right .calendar-day.sunday { color: #d63031; }
+.schedule-right .calendar-day.saturday { color: #0984e3; }
+.schedule-right .weekday.sunday { color: #d63031; }
+.schedule-right .weekday.saturday { color: #0984e3; }
+
+.schedule-right .calendar-day.today .day-number {
+  background: #e94560;
+  color: #fff;
+}
+
+.schedule-right .calendar-day.selected {
+  background: #d0d8e8;
+  outline: 2px solid #e94560;
+}
+
 .input-area {
   display: flex;
   gap: 8px;
   margin-bottom: 16px;
   flex-shrink: 0;
+  position: relative;
 }
 
 .input-area input[type='date'],
@@ -157,6 +204,7 @@ input, textarea {
   font-size: 13px;
   outline: none;
   transition: border-color 0.2s;
+  color-scheme: dark;
 }
 
 input:focus, textarea:focus {
@@ -279,7 +327,15 @@ input:focus, textarea:focus {
 .calendar {
   background: #16213e;
   border-radius: 12px;
-  padding: 16px;
+  padding: 12px;
+  box-sizing: border-box;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.picker-dropdown .calendar {
+  border: 1px solid #333;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
 }
 
 .calendar-header {
@@ -330,7 +386,6 @@ input:focus, textarea:focus {
 }
 
 .calendar-day {
-  aspect-ratio: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -340,6 +395,8 @@ input:focus, textarea:focus {
   position: relative;
   font-size: 13px;
   transition: background 0.2s;
+  padding: 8px 0;
+  min-width: 0;
 }
 
 .calendar-day:not(.empty):hover {
@@ -555,13 +612,165 @@ input:focus, textarea:focus {
   gap: 8px;
 }
 
-.input-row input[type='date'],
-.input-row input[type='time'] {
+.input-row input[type='text'] {
   flex: 1;
 }
 
-.input-row input[type='text'] {
+/* 날짜/시간 선택 버튼 공통 */
+.date-picker-btn {
   flex: 1;
+  background: #16213e;
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: #e0e0e0;
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color 0.2s;
+  text-align: center;
+}
+
+.date-picker-btn:hover {
+  border-color: #e94560;
+}
+
+.picker-anchor {
+  position: relative;
+}
+
+.picker-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 99;
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.picker-dropdown {
+  z-index: 100;
+}
+
+.picker-dropdown.picker-inline {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 4px;
+}
+
+.picker-dropdown.picker-center {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 340px;
+}
+
+.picker-dropdown .tp-container {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.picker-close-btn {
+  display: block;
+  width: 100%;
+  padding: 10px;
+  margin-top: 4px;
+  background: #16213e;
+  border: 1px solid #333;
+  border-radius: 8px;
+  color: #aaa;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.picker-close-btn:hover {
+  color: #fff;
+  background: #1a2742;
+}
+
+/* 시간 선택 버튼 */
+.time-picker-btn {
+  flex: 1;
+  background: #16213e;
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: #e0e0e0;
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color 0.2s;
+  text-align: center;
+}
+
+.time-picker-btn:hover {
+  border-color: #e94560;
+}
+
+/* TimePicker */
+
+.tp-container {
+  display: flex;
+  align-items: center;
+  background: #16213e;
+  border: 1px solid #333;
+  border-radius: 8px;
+  position: relative;
+  height: 160px;
+  overflow: hidden;
+}
+
+.tp-column {
+  flex: 1;
+  height: 100%;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.tp-column::-webkit-scrollbar {
+  display: none;
+}
+
+.tp-item {
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  color: #666;
+  cursor: pointer;
+  transition: color 0.15s;
+  user-select: none;
+}
+
+.tp-item:hover {
+  color: #aaa;
+}
+
+.tp-item.tp-selected {
+  color: #e0e0e0;
+  font-weight: 600;
+  font-size: 16px;
+}
+
+.tp-separator {
+  color: #e0e0e0;
+  font-size: 18px;
+  font-weight: 600;
+  padding: 0 2px;
+}
+
+.tp-highlight {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 64px;
+  height: 32px;
+  background: rgba(233, 69, 96, 0.12);
+  border-radius: 6px;
+  pointer-events: none;
 }
 
 /* 캘린더 토글 버튼 */
@@ -581,9 +790,71 @@ input:focus, textarea:focus {
   background: #1a2742;
 }
 
-/* 팝업 내 캘린더 */
-.popup-calendar {
-  margin-bottom: 12px;
+/* 조회용 달력 (플로팅) */
+.view-calendar-wrapper {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  margin-top: 4px;
+}
+
+.view-calendar-wrapper .calendar {
+  background: #e8edf5;
+  color: #1a1a2e;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.view-calendar-wrapper .calendar-header {
+  color: #1a1a2e;
+}
+
+.view-calendar-wrapper .calendar-header button {
+  color: #666;
+}
+
+.view-calendar-wrapper .calendar-header button:hover {
+  color: #1a1a2e;
+  background: #d0d8e8;
+}
+
+.view-calendar-wrapper .weekday {
+  color: #888;
+}
+
+.view-calendar-wrapper .calendar-day {
+  color: #1a1a2e;
+}
+
+.view-calendar-wrapper .calendar-day:not(.empty):hover {
+  background: #d0d8e8;
+}
+
+.view-calendar-wrapper .calendar-day.sunday { color: #d63031; }
+.view-calendar-wrapper .calendar-day.saturday { color: #0984e3; }
+.view-calendar-wrapper .weekday.sunday { color: #d63031; }
+.view-calendar-wrapper .weekday.saturday { color: #0984e3; }
+
+.view-calendar-wrapper .calendar-day.today .day-number {
+  background: #e94560;
+  color: #fff;
+}
+
+.view-calendar-wrapper .calendar-day.selected {
+  background: #d0d8e8;
+  outline: 2px solid #e94560;
+}
+
+.view-calendar-wrapper .picker-close-btn {
+  background: #e8edf5;
+  border-color: #ccc;
+  color: #555;
+}
+
+.view-calendar-wrapper .picker-close-btn:hover {
+  background: #d0d8e8;
+  color: #1a1a2e;
 }
 
 /* 팝업 일정 아이템 - 컴팩트 */
