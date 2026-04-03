@@ -102,14 +102,13 @@ body {
   position: absolute;
   inset: 0;
   padding: 20px;
-  visibility: hidden;
-  display: flex;
+  display: none;
   flex-direction: column;
   overflow: hidden;
 }
 
 .tab-panel.active {
-  visibility: visible;
+  display: flex;
 }
 
 /* Schedule Tab */
@@ -965,7 +964,7 @@ input:focus, textarea:focus {
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: 10px;
-  padding: 16px;
+  padding: 8px 16px;
 }
 
 .settings-section-title {
@@ -988,6 +987,7 @@ input:focus, textarea:focus {
 .settings-row:last-child {
   border-bottom: none;
 }
+
 
 .settings-row.vertical {
   flex-direction: column;
@@ -1159,6 +1159,52 @@ input:focus, textarea:focus {
   padding: 16px;
 }
 
+.away-check-help {
+  align-self: flex-start;
+  position: relative;
+}
+
+.help-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  color: #888;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.help-icon:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: #ccc;
+}
+
+.help-tooltip {
+  display: none;
+  position: absolute;
+  top: 28px;
+  left: 0;
+  background: #1a2742;
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 12px;
+  color: #aaa;
+  line-height: 1.6;
+  white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  z-index: 10;
+}
+
+.away-check-help:hover .help-tooltip {
+  display: block;
+}
+
 .away-check-timer-section {
   display: flex;
   justify-content: center;
@@ -1219,7 +1265,7 @@ input:focus, textarea:focus {
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: 10px;
-  padding: 16px;
+  padding: 8px 16px 4px;
 }
 
 .away-check-limit-input {
@@ -1272,11 +1318,12 @@ input:focus, textarea:focus {
   color: #888;
 }
 
-.away-check-limit-desc {
+.away-check-bottom-desc {
   font-size: 12px;
-  color: #666;
+  color: #555;
   text-align: center;
-  margin-top: 8px;
+  margin-top: auto;
+  padding-bottom: 8px;
 }
 
 .away-check-info {

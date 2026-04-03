@@ -47,7 +47,7 @@ function getRendererFile(): string {
 function createPopupWindow(): void {
   popupWindow = new BrowserWindow({
     width: 380,
-    height: 600,
+    height: 550,
     show: false,
     frame: false,
     resizable: false,

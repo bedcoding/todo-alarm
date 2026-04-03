@@ -11,6 +11,7 @@ export default function AwayCheckTab({ awayCheck, onSave }: AwayCheckTabProps) {
   const [idleSeconds, setIdleSeconds] = useState(0)
   const [limitSeconds, setLimitSeconds] = useState(awayCheck.limitMinutes * 60)
 
+
   useEffect(() => {
     setLocal(awayCheck)
     setLimitSeconds(awayCheck.limitMinutes * 60)
@@ -38,6 +39,13 @@ export default function AwayCheckTab({ awayCheck, onSave }: AwayCheckTabProps) {
 
   return (
     <div className="away-check-tab">
+      <div className="away-check-help">
+        <span className="help-icon">?</span>
+        <div className="help-tooltip">
+          키보드/마우스 입력 시 타이머가 초기화됩니다.<br />
+          키보드 입력이 더 정확하게 감지됩니다.
+        </div>
+      </div>
       <div className="away-check-timer-section">
         <div className={`away-check-circle ${isWarning ? 'warning' : ''} ${isOver ? 'over' : ''}`}>
           <svg viewBox="0 0 120 120" className="away-check-svg">
@@ -85,7 +93,7 @@ export default function AwayCheckTab({ awayCheck, onSave }: AwayCheckTabProps) {
         </div>
 
         <div className="settings-row">
-          <label>제한 시간</label>
+          <label>제한시간</label>
           <div className="away-check-limit-input">
             <button
               className="limit-btn"
@@ -112,24 +120,19 @@ export default function AwayCheckTab({ awayCheck, onSave }: AwayCheckTabProps) {
             </button>
           </div>
         </div>
-        <div className="away-check-limit-desc">
-          {local.limitMinutes}분 초과 시 자리비움 경고 알림이 발송됩니다
-        </div>
-
       </div>
 
-      {local.enabled && (
+      {local.enabled && (isOver || isWarning) && (
         <div className="away-check-info">
           {isOver
             ? '⚠️ 자리 비운 시간이 초과되었습니다!'
-            : isWarning
-            ? '⏰ 곧 시간이 초과됩니다!'
-            : '키보드/마우스 입력 시 타이머가 초기화됩니다.'}
-          <div className="away-check-hint">
-            * 키보드 입력의 감지 정확도가 더 높습니다.
-          </div>
+            : '⏰ 곧 시간이 초과됩니다!'}
         </div>
       )}
+
+      <div className="away-check-bottom-desc">
+        {local.limitMinutes}분 초과 시 자리비움 경고 알림이 발송됩니다
+      </div>
     </div>
   )
 }
