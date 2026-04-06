@@ -227,7 +227,7 @@ function sendSlackNotification(settings: Settings, message: string): Promise<boo
 
 function sendScheduleNotification(schedule: Schedule, missed: boolean, settings: Settings): void {
   const timingText = settings.alertTiming > 0 ? ` (${settings.alertTiming}분 전)` : ''
-  const title = missed ? `📌 놓친 일정 알림` : `📌 일정 알림${timingText}`
+  const title = missed ? `📌 놓친 알림` : `📌 일정 알림${timingText}`
 
   if (settings.macNotification) {
     new Notification({
@@ -238,10 +238,10 @@ function sendScheduleNotification(schedule: Schedule, missed: boolean, settings:
   }
 
   if (settings.slackEnabled) {
-    const prefix = missed ? `📌 *놓친 일정 알림*` : `📌 *일정 알림${timingText}*`
+    const prefix = missed ? `📌 *놓친 알림 ${schedule.date} ${schedule.time}*` : `📌 *일정 알림${timingText} ${schedule.date} ${schedule.time}*`
     sendSlackNotification(
       settings,
-      `${prefix}\n${schedule.content}\n📅 ${schedule.date} ${schedule.time}`
+      `${prefix}\n${schedule.content}`
     )
   }
 

@@ -75,7 +75,8 @@ export default function ScheduleTab({ schedules, onSave, settings, onSettingsCha
       date: editDate,
       time: editTime,
       content: editContent.trim(),
-      datetime: datetime.toISOString()
+      datetime: datetime.toISOString(),
+      notified: false
     } : s))
     setEditingSchedule(null)
   }
