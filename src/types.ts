@@ -85,6 +85,7 @@ export interface ElectronAPI {
   saveAwayCheck: (awayCheck: AwayCheckSettings) => Promise<boolean>
   openMainWindow: () => Promise<boolean>
   testNotification: () => Promise<{ success: boolean }>
+  testAwayNotification: () => Promise<{ success: boolean }>
   testSlack: (config: { method: SlackMethod; webhookUrl: string; botToken: string; channelId: string }) => Promise<{ success: boolean; error?: string }>
   onSchedulesUpdated: (callback: (schedules: Schedule[]) => void) => void
   onMemosUpdated: (callback: (memos: Memo[]) => void) => void

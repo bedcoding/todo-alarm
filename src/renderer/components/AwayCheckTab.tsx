@@ -202,7 +202,7 @@ export default function AwayCheckTab({ awayCheck, onSave }: AwayCheckTabProps) {
             )}
             <div className="settings-row">
               <button className="test-notification-btn" onClick={async () => {
-                const result = await window.api.testNotification()
+                const result = await window.api.testAwayNotification()
                 setNotifTest(result.success ? 'success' : 'denied')
                 setTimeout(() => setNotifTest('idle'), 3000)
               }}>

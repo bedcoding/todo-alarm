@@ -11,6 +11,7 @@ contextBridge.exposeInMainWorld('api', {
   saveAwayCheck: (awayCheck: unknown) => ipcRenderer.invoke('save-away-check', awayCheck),
   openMainWindow: () => ipcRenderer.invoke('open-main-window'),
   testNotification: () => ipcRenderer.invoke('test-notification'),
+  testAwayNotification: () => ipcRenderer.invoke('test-away-notification'),
   testSlack: (config: unknown) => ipcRenderer.invoke('test-slack', config),
   onSchedulesUpdated: (callback: (schedules: unknown[]) => void) => {
     ipcRenderer.on('schedules-updated', (_, schedules) => callback(schedules))

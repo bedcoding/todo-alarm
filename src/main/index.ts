@@ -211,9 +211,11 @@ async function sendSlackBot(botToken: string, channelId: string, message: string
       },
       body: JSON.stringify({ channel: channelId, text: message })
     })
-    const data = (await response.json()) as { ok: boolean }
+    const data = (await response.json()) as { ok: boolean; error?: string }
+    if (!data.ok) console.error('[Slack Bot Error]', data)
     return data.ok
-  } catch {
+  } catch (e) {
+    console.error('[Slack Bot Exception]', e)
     return false
   }
 }
@@ -238,10 +240,10 @@ function sendScheduleNotification(schedule: Schedule, missed: boolean, settings:
   }
 
   if (settings.slackEnabled) {
-    const prefix = missed ? `📌 *놓친 알림 ${schedule.date} ${schedule.time}*` : `📌 *일정 알림${timingText} ${schedule.date} ${schedule.time}*`
+    const prefix = missed ? `📌 *놓친 알림*` : `📌 *일정 알림${timingText}*`
     sendSlackNotification(
       settings,
-      `${prefix}\n${schedule.content}`
+      `${prefix}\n📅 ${schedule.date} ${schedule.time}\n${schedule.content}`
     )
   }
 
@@ -510,7 +512,36 @@ ipcMain.handle('test-notification', () => {
     notif.on('show', () => resolve({ success: true }))
     notif.on('failed', () => resolve({ success: false }))
     notif.show()
+
+    if (settings.slackEnabled) {
+      sendSlackNotification(settings, `📌 *일정 알림${timingText}*\n📅 ${dateStr} ${timeStr}\n알림 테스트`)
+    }
+
     // 3초 타임아웃 - show/failed 둘 다 안 오면 성공으로 간주
+    setTimeout(() => resolve({ success: true }), 3000)
+  })
+})
+
+ipcMain.handle('test-away-notification', () => {
+  if (!Notification.isSupported()) {
+    return { success: false }
+  }
+  return new Promise<{ success: boolean }>((resolve) => {
+    const data = readData()
+    const { settings, awayCheck } = data
+    const notif = new Notification({
+      title: '⚠️ 이석 경고!',
+      body: `${awayCheck.limitMinutes}분 이상 자리를 비웠습니다!`,
+      sound: 'default'
+    })
+    notif.on('show', () => resolve({ success: true }))
+    notif.on('failed', () => resolve({ success: false }))
+    notif.show()
+
+    if (settings.slackEnabled) {
+      sendSlackNotification(settings, `⚠️ *이석 경고!*\n${awayCheck.limitMinutes}분 이상 자리를 비웠습니다!`)
+    }
+
     setTimeout(() => resolve({ success: true }), 3000)
   })
 })
