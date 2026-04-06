@@ -9,6 +9,8 @@ interface MemoTabProps {
 
 export default function MemoTab({ memos, onSave }: MemoTabProps) {
   const [content, setContent] = useState('')
+  const [editingId, setEditingId] = useState<number | null>(null)
+  const [editContent, setEditContent] = useState('')
 
   const addMemo = () => {
     if (!content.trim()) return
@@ -25,31 +27,45 @@ export default function MemoTab({ memos, onSave }: MemoTabProps) {
     onSave(memos.filter((m) => m.id !== id))
   }
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+  const startEdit = (m: Memo) => {
+    setEditingId(m.id)
+    setEditContent(m.content)
+  }
+
+  const saveEdit = () => {
+    if (editingId === null) return
+    if (!editContent.trim()) return
+    onSave(memos.map((m) => m.id === editingId ? { ...m, content: editContent.trim() } : m))
+    setEditingId(null)
+    setEditContent('')
+  }
+
+  const moveMemo = (id: number, direction: -1 | 1) => {
+    const idx = memos.findIndex((m) => m.id === id)
+    if (idx < 0) return
+    const newIdx = idx + direction
+    if (newIdx < 0 || newIdx >= memos.length) return
+    const updated = [...memos]
+    ;[updated[idx], updated[newIdx]] = [updated[newIdx], updated[idx]]
+    onSave(updated)
+  }
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
       e.preventDefault()
       addMemo()
     }
   }
 
-  const formatDate = (isoStr: string): string => {
-    const d = new Date(isoStr)
-    const month = d.getMonth() + 1
-    const day = d.getDate()
-    const h = d.getHours()
-    const m = String(d.getMinutes()).padStart(2, '0')
-    return `${month}/${day} ${h}:${m}`
-  }
-
   return (
     <div className="memo-tab">
       <div className="memo-input-area">
-        <textarea
-          placeholder="아이디어나 메모를 입력하세요"
+        <input
+          type="text"
+          placeholder="메모를 입력하세요"
           value={content}
           onChange={(e) => setContent(e.target.value)}
           onKeyDown={handleKeyDown}
-          rows={3}
         />
         <button className="add-btn" onClick={addMemo}>
           추가
@@ -59,14 +75,28 @@ export default function MemoTab({ memos, onSave }: MemoTabProps) {
         {memos.length === 0 ? (
           <EmptyBell message="메모를 추가해보세요" />
         ) : (
-          memos.map((m) => (
-            <div key={m.id} className="memo-item">
-              <div className="memo-content">{m.content}</div>
-              <div className="memo-footer">
-                <span className="memo-date">{formatDate(m.createdAt)}</span>
-                <button className="delete-btn" onClick={() => removeMemo(m.id)}>
-                  ×
-                </button>
+          memos.map((m, i) => (
+            <div key={m.id} className="memo-item slim">
+              {editingId === m.id ? (
+                <input
+                  type="text"
+                  className="memo-edit-input"
+                  value={editContent}
+                  onChange={(e) => setEditContent(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.nativeEvent.isComposing) saveEdit()
+                    if (e.key === 'Escape') setEditingId(null)
+                  }}
+                  onBlur={saveEdit}
+                  autoFocus
+                />
+              ) : (
+                <span className="memo-content-inline" onClick={() => startEdit(m)}>{m.content}</span>
+              )}
+              <div className="memo-actions">
+                <button className="move-btn" onClick={() => moveMemo(m.id, -1)} disabled={i === 0}>▲</button>
+                <button className="move-btn" onClick={() => moveMemo(m.id, 1)} disabled={i === memos.length - 1}>▼</button>
+                <button className="delete-btn" onClick={() => removeMemo(m.id)}>×</button>
               </div>
             </div>
           ))

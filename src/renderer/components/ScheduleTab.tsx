@@ -32,6 +32,10 @@ export default function ScheduleTab({ schedules, onSave, settings, onSettingsCha
   const [showDatePicker, setShowDatePicker] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
   const [notifTest, setNotifTest] = useState<'idle' | 'success' | 'denied'>('idle')
+  const [editingSchedule, setEditingSchedule] = useState<Schedule | null>(null)
+  const [editDate, setEditDate] = useState('')
+  const [editTime, setEditTime] = useState('')
+  const [editContent, setEditContent] = useState('')
 
   const addSchedule = () => {
     if (!date || !time || !content.trim()) return
@@ -54,6 +58,26 @@ export default function ScheduleTab({ schedules, onSave, settings, onSettingsCha
 
   const removeSchedule = (id: number) => {
     onSave(schedules.filter((s) => s.id !== id))
+  }
+
+  const startEdit = (s: Schedule) => {
+    setEditingSchedule(s)
+    setEditDate(s.date)
+    setEditTime(s.time)
+    setEditContent(s.content)
+  }
+
+  const saveEdit = () => {
+    if (!editingSchedule || !editDate || !editTime || !editContent.trim()) return
+    const datetime = new Date(`${editDate}T${editTime}`)
+    onSave(schedules.map((s) => s.id === editingSchedule.id ? {
+      ...s,
+      date: editDate,
+      time: editTime,
+      content: editContent.trim(),
+      datetime: datetime.toISOString()
+    } : s))
+    setEditingSchedule(null)
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -163,9 +187,8 @@ export default function ScheduleTab({ schedules, onSave, settings, onSettingsCha
                   <span className="schedule-time">{formatTime(s.time)}</span>
                   <span className="schedule-content">{s.content}</span>
                 </div>
-                <button className="delete-btn" onClick={() => removeSchedule(s.id)}>
-                  ×
-                </button>
+                <button className="edit-btn" onClick={() => startEdit(s)}>✎</button>
+                <button className="delete-btn" onClick={() => removeSchedule(s.id)}>×</button>
               </div>
             ))
           )}
@@ -206,6 +229,43 @@ export default function ScheduleTab({ schedules, onSave, settings, onSettingsCha
               </div>
             </>
           )}
+        </>
+      )}
+
+      {editingSchedule && (
+        <>
+          <div className="picker-overlay" onClick={() => setEditingSchedule(null)} />
+          <div className="settings-modal">
+            <div className="settings-modal-title">일정 수정</div>
+            <div className="edit-schedule-form" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <input
+                type="date"
+                value={editDate}
+                onChange={(e) => setEditDate(e.target.value)}
+                className="time-input"
+                style={{ width: '100%' }}
+              />
+              <input
+                type="time"
+                value={editTime}
+                onChange={(e) => setEditTime(e.target.value)}
+                className="time-input"
+                style={{ width: '100%' }}
+              />
+              <input
+                type="text"
+                value={editContent}
+                onChange={(e) => setEditContent(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) saveEdit() }}
+                className="time-input"
+                placeholder="일정 내용"
+                style={{ width: '100%' }}
+                autoFocus
+              />
+            </div>
+            <button className="picker-close-btn" style={{ background: 'rgba(233,69,96,0.15)', color: '#e94560' }} onClick={saveEdit}>저장</button>
+            <button className="picker-close-btn" onClick={() => setEditingSchedule(null)}>취소</button>
+          </div>
         </>
       )}
 

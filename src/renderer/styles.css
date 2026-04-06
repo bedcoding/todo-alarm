@@ -312,6 +312,21 @@ input:focus, textarea:focus {
   white-space: nowrap;
 }
 
+.edit-btn {
+  background: none;
+  border: none;
+  color: #555;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1;
+  transition: color 0.2s;
+}
+
+.edit-btn:hover {
+  color: #4dabf7;
+}
+
 .delete-btn {
   background: none;
   border: none;
@@ -519,6 +534,22 @@ input:focus, textarea:focus {
   border-left: 3px solid #4dabf7;
 }
 
+.memo-item.slim {
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.memo-content-inline {
+  flex: 1;
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
 .memo-content {
   font-size: 14px;
   line-height: 1.6;
@@ -531,6 +562,40 @@ input:focus, textarea:focus {
   justify-content: space-between;
   align-items: center;
   margin-top: 8px;
+}
+
+.memo-edit-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.memo-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.move-btn {
+  background: none;
+  border: 1px solid #333;
+  border-radius: 4px;
+  color: #888;
+  font-size: 10px;
+  cursor: pointer;
+  padding: 2px 6px;
+  transition: all 0.2s;
+}
+
+.move-btn:hover:not(:disabled) {
+  color: #e0e0e0;
+  border-color: #e94560;
+}
+
+.move-btn:disabled {
+  opacity: 0.3;
+  cursor: default;
 }
 
 .memo-date {
