@@ -4,7 +4,7 @@
 
 ## 다운로드
 
-[최신 버전 다운로드 (v1.0.0)](https://github.com/bedcoding/todo-alarm/releases/latest)
+[최신 버전 다운로드](https://github.com/bedcoding/todo-alarm/releases/latest)
 
 > Apple Silicon(M1/M2/M3/M4) Mac 전용
 
