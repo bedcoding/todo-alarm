@@ -101,7 +101,7 @@ export default function App() {
           className={`tab ${activeTab === 'settings' ? 'active' : ''}`}
           onClick={() => setActiveTab('settings')}
         >
-          설정
+          슬랙
         </button>
         {isPopup && (
           <>

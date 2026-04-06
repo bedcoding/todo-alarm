@@ -1007,6 +1007,38 @@ input:focus, textarea:focus {
   background: rgba(233, 69, 96, 0.25);
 }
 
+.away-check-tab .inline-settings-toggle {
+  border-top: none;
+}
+
+.calendar-fab {
+  position: absolute;
+  bottom: 56px;
+  right: 8px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #16213e;
+  border: 1px solid #333;
+  font-size: 18px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 5;
+  transition: all 0.2s;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.calendar-fab:hover {
+  border-color: #e94560;
+  background: #1a2742;
+}
+
+.calendar-fab.active {
+  border-color: #e94560;
+  background: rgba(233, 69, 96, 0.15);
+}
 
 
 .settings-modal {
@@ -1070,6 +1102,34 @@ input:focus, textarea:focus {
 .settings-row.compact {
   border-bottom: none;
   padding-bottom: 4px;
+}
+
+.day-selector {
+  display: flex;
+  gap: 4px;
+  padding-bottom: 10px;
+}
+
+.day-btn {
+  flex: 1;
+  padding: 6px 0;
+  border: 1px solid #333;
+  border-radius: 6px;
+  background: #16213e;
+  color: #888;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.day-btn.active {
+  background: rgba(233, 69, 96, 0.2);
+  border-color: #e94560;
+  color: #e94560;
+}
+
+.day-btn:hover {
+  border-color: #e94560;
 }
 
 .settings-section-title {
@@ -1359,6 +1419,16 @@ input:focus, textarea:focus {
   font-size: 28px;
   font-weight: 700;
   color: #e94560;
+}
+
+.away-check-excluded {
+  font-size: 18px;
+  font-weight: 600;
+  color: #888;
+}
+
+.away-check-circle.excluded {
+  opacity: 0.4;
 }
 
 .away-check-label {

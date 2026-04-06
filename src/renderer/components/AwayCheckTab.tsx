@@ -12,6 +12,7 @@ export default function AwayCheckTab({ awayCheck, onSave }: AwayCheckTabProps) {
   const [limitSeconds, setLimitSeconds] = useState(awayCheck.limitMinutes * 60)
   const [showSettings, setShowSettings] = useState(false)
   const [notifTest, setNotifTest] = useState<'idle' | 'success' | 'denied'>('idle')
+  const [excluded, setExcluded] = useState(false)
 
   useEffect(() => {
     setLocal(awayCheck)
@@ -22,6 +23,7 @@ export default function AwayCheckTab({ awayCheck, onSave }: AwayCheckTabProps) {
     window.api.onIdleStatus((data) => {
       setIdleSeconds(data.idleSeconds)
       setLimitSeconds(data.limitSeconds)
+      setExcluded(data.excluded ?? false)
     })
   }, [])
 
@@ -47,10 +49,10 @@ export default function AwayCheckTab({ awayCheck, onSave }: AwayCheckTabProps) {
         </div>
       </div>
       <div className="away-check-timer-section">
-        <div className={`away-check-circle ${isWarning ? 'warning' : ''} ${isOver ? 'over' : ''}`}>
+        <div className={`away-check-circle ${isWarning ? 'warning' : ''} ${isOver ? 'over' : ''} ${excluded ? 'excluded' : ''}`}>
           <svg viewBox="0 0 120 120" className="away-check-svg">
             <circle cx="60" cy="60" r="52" fill="none" stroke="#333" strokeWidth="8" />
-            {local.enabled && (
+            {local.enabled && !excluded && (
               <circle
                 cx="60" cy="60" r="52"
                 fill="none"
@@ -67,6 +69,8 @@ export default function AwayCheckTab({ awayCheck, onSave }: AwayCheckTabProps) {
           <div className="away-check-time">
             {!local.enabled ? (
               <span className="away-check-off">OFF</span>
+            ) : excluded ? (
+              <span className="away-check-excluded">일시중지</span>
             ) : isOver ? (
               <span className="away-check-exceeded">초과!</span>
             ) : (
@@ -132,6 +136,40 @@ export default function AwayCheckTab({ awayCheck, onSave }: AwayCheckTabProps) {
           <div className="settings-modal">
             <div className="settings-modal-title">알림 설정</div>
             <div className="settings-row compact">
+              <label>요일 제외</label>
+            </div>
+            <div className="day-selector">
+              {['일', '월', '화', '수', '목', '금', '토'].map((label, i) => (
+                <button
+                  key={i}
+                  className={`day-btn ${local.excludeDays.includes(i) ? 'active' : ''}`}
+                  onClick={() => {
+                    const days = local.excludeDays.includes(i)
+                      ? local.excludeDays.filter((d) => d !== i)
+                      : [...local.excludeDays, i]
+                    update({ excludeDays: days })
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <div className="settings-row compact">
+              <label>출근 전 제외</label>
+              <div
+                className={`toggle ${local.excludeBeforeWork ? 'on' : ''}`}
+                onClick={() => update({ excludeBeforeWork: !local.excludeBeforeWork })}
+              >
+                <div className="toggle-knob" />
+              </div>
+            </div>
+            {local.excludeBeforeWork && (
+              <div className="time-range no-border">
+                <input type="time" value={local.beforeWorkTime} onChange={(e) => update({ beforeWorkTime: e.target.value })} className="time-input" />
+                <span>이전</span>
+              </div>
+            )}
+            <div className="settings-row compact">
               <label>점심시간 제외</label>
               <div
                 className={`toggle ${local.excludeLunch ? 'on' : ''}`}
@@ -159,6 +197,7 @@ export default function AwayCheckTab({ awayCheck, onSave }: AwayCheckTabProps) {
             {local.excludeAfterWork && (
               <div className="time-range no-border">
                 <input type="time" value={local.afterWorkTime} onChange={(e) => update({ afterWorkTime: e.target.value })} className="time-input" />
+                <span>이후</span>
               </div>
             )}
             <div className="settings-row">

@@ -57,7 +57,7 @@ export default function ScheduleTab({ schedules, onSave, settings, onSettingsCha
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') addSchedule()
+    if (e.key === 'Enter' && !e.nativeEvent.isComposing) addSchedule()
   }
 
   const filteredSchedules = selectedDate
@@ -133,36 +133,12 @@ export default function ScheduleTab({ schedules, onSave, settings, onSettingsCha
             <button className="add-btn" onClick={addSchedule}>
               추가
             </button>
-            {isPopup && (
-              <>
-                <button
-                  className={`calendar-toggle-btn ${showCalendar ? 'active' : ''}`}
-                  onClick={() => setShowCalendar(!showCalendar)}
-                  title="일정 조회"
-                >
-                  📅
-                </button>
-                {showCalendar && (
-                  <>
-                    <div className="picker-overlay" onClick={() => setShowCalendar(false)} />
-                    <div className="view-calendar-wrapper">
-                      <Calendar
-                        scheduleDates={scheduleDates}
-                        selectedDate={selectedDate}
-                        onSelectDate={(d) => setSelectedDate(d === selectedDate ? null : d)}
-                      />
-                      <button className="picker-close-btn" onClick={() => setShowCalendar(false)}>닫기</button>
-                    </div>
-                  </>
-                )}
-              </>
-            )}
           </div>
         </div>
 
         {selectedDate && (
           <div className="filter-info">
-            <span>{formatDisplayDate(selectedDate)} 일정</span>
+            <span>{formatDisplayDate(selectedDate)} 일정만 보기</span>
             <button className="clear-filter" onClick={() => setSelectedDate(null)}>
               전체 보기
             </button>
@@ -207,6 +183,32 @@ export default function ScheduleTab({ schedules, onSave, settings, onSettingsCha
         </div>
       )}
 
+      {isPopup && (
+        <>
+          <button
+            className={`calendar-fab ${showCalendar ? 'active' : ''}`}
+            onClick={() => setShowCalendar(!showCalendar)}
+            title="특정 날짜만 일정 조회하기"
+          >
+            📅
+          </button>
+          {showCalendar && (
+            <>
+              <div className="picker-overlay" onClick={() => setShowCalendar(false)} />
+              <div className="settings-modal">
+                <div className="settings-modal-title">특정 날짜만 일정 조회하기</div>
+                <Calendar
+                  scheduleDates={scheduleDates}
+                  selectedDate={selectedDate}
+                  onSelectDate={(d) => setSelectedDate(d === selectedDate ? null : d)}
+                />
+                <button className="picker-close-btn" onClick={() => setShowCalendar(false)}>닫기</button>
+              </div>
+            </>
+          )}
+        </>
+      )}
+
       <button className="inline-settings-toggle" onClick={() => setShowSettings(true)}>
         알림 설정
       </button>
@@ -238,7 +240,7 @@ export default function ScheduleTab({ schedules, onSave, settings, onSettingsCha
               </select>
             </div>
             <div className="settings-row">
-              <label>하루 시작 알림</label>
+              <label>오늘 일정 알림</label>
               <div
                 className={`toggle ${settings.morningAlertEnabled ? 'on' : ''}`}
                 onClick={() => onSettingsChange({ morningAlertEnabled: !settings.morningAlertEnabled })}

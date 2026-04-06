@@ -316,28 +316,41 @@ function startAwayChecker(): void {
 
     const idleSeconds = powerMonitor.getSystemIdleTime()
 
-    // UI에 현재 상태 전송
-    sendToAllWindows('idle-status', { idleSeconds, limitSeconds: current.awayCheck.limitMinutes * 60 })
-
     // 제외 시간대 체크
     const now = new Date()
     const currentMinutes = now.getHours() * 60 + now.getMinutes()
-    const { excludeLunch, lunchStart, lunchEnd, excludeAfterWork, afterWorkTime } = current.awayCheck
+    const { excludeBeforeWork, beforeWorkTime, excludeLunch, lunchStart, lunchEnd, excludeAfterWork, afterWorkTime, excludeDays } = current.awayCheck
+    let excluded = false
 
+    if (excludeDays.length > 0 && excludeDays.includes(now.getDay())) {
+      excluded = true
+    }
+    if (excludeBeforeWork) {
+      const [bwh, bwm] = beforeWorkTime.split(':').map(Number)
+      if (currentMinutes < bwh * 60 + bwm) {
+        excluded = true
+      }
+    }
     if (excludeLunch) {
       const [lsh, lsm] = lunchStart.split(':').map(Number)
       const [leh, lem] = lunchEnd.split(':').map(Number)
       if (currentMinutes >= lsh * 60 + lsm && currentMinutes < leh * 60 + lem) {
-        awayAlertSent = false
-        return
+        excluded = true
       }
     }
     if (excludeAfterWork) {
       const [awh, awm] = afterWorkTime.split(':').map(Number)
       if (currentMinutes >= awh * 60 + awm) {
-        awayAlertSent = false
-        return
+        excluded = true
       }
+    }
+
+    // UI에 현재 상태 전송
+    sendToAllWindows('idle-status', { idleSeconds, limitSeconds: current.awayCheck.limitMinutes * 60, excluded })
+
+    if (excluded) {
+      awayAlertSent = false
+      return
     }
 
     if (idleSeconds >= current.awayCheck.limitMinutes * 60) {
@@ -383,6 +396,11 @@ app.whenReady().then(() => {
   createPopupWindow()
   startAlarmChecker()
   startAwayChecker()
+
+  powerMonitor.on('resume', () => {
+    restartAlarmChecker()
+    startAwayChecker()
+  })
 })
 
 app.on('window-all-closed', () => {

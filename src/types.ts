@@ -44,21 +44,27 @@ export const DEFAULT_SETTINGS: Settings = {
 export interface AwayCheckSettings {
   enabled: boolean
   limitMinutes: number
+  excludeBeforeWork: boolean
+  beforeWorkTime: string // "09:00"
   excludeLunch: boolean
   lunchStart: string // "12:00"
   lunchEnd: string   // "13:00"
   excludeAfterWork: boolean
   afterWorkTime: string // "18:00"
+  excludeDays: number[] // 0=일, 1=월, ..., 6=토
 }
 
 export const DEFAULT_AWAY_CHECK: AwayCheckSettings = {
   enabled: false,
   limitMinutes: 20,
+  excludeBeforeWork: true,
+  beforeWorkTime: '09:00',
   excludeLunch: false,
   lunchStart: '12:00',
   lunchEnd: '13:00',
   excludeAfterWork: false,
   afterWorkTime: '18:00',
+  excludeDays: [0, 6],
 }
 
 export interface AppData {
@@ -83,7 +89,7 @@ export interface ElectronAPI {
   onSchedulesUpdated: (callback: (schedules: Schedule[]) => void) => void
   onMemosUpdated: (callback: (memos: Memo[]) => void) => void
   onAwayCheckUpdated: (callback: (awayCheck: AwayCheckSettings) => void) => void
-  onIdleStatus: (callback: (data: { idleSeconds: number; limitSeconds: number }) => void) => void
+  onIdleStatus: (callback: (data: { idleSeconds: number; limitSeconds: number; excluded?: boolean }) => void) => void
   setPinned: (pinned: boolean) => Promise<boolean>
 }
 
