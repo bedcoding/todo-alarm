@@ -1126,6 +1126,52 @@ input:focus, textarea:focus {
   color: #e0e0e0;
   margin-bottom: 12px;
   text-align: center;
+  position: relative;
+}
+
+.settings-tooltip-wrap {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.settings-tooltip-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1px solid #555;
+  color: #888;
+  font-size: 11px;
+  cursor: help;
+}
+
+.settings-tooltip-wrap:hover .settings-tooltip-icon {
+  color: #e0e0e0;
+  border-color: #e94560;
+}
+
+.settings-tooltip-text {
+  display: none;
+  position: absolute;
+  left: 0;
+  top: 110%;
+  background: #1a1a2e;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 11px;
+  font-weight: 400;
+  color: #aaa;
+  width: 220px;
+  z-index: 10;
+}
+
+.settings-tooltip-wrap:hover .settings-tooltip-text {
+  display: block;
 }
 
 .settings-modal .settings-row {
@@ -1235,10 +1281,16 @@ input:focus, textarea:focus {
   color: #e0e0e0;
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 6px;
-  padding: 6px 10px;
+  padding: 6px 14px;
   font-size: 13px;
   cursor: pointer;
   width: 125px;
+}
+
+.settings-divider {
+  border: none;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  margin: 4px 0;
 }
 
 .settings-row select:focus {

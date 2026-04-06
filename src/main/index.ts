@@ -28,6 +28,7 @@ let tray: Tray | null = null
 let popupWindow: BrowserWindow | null = null
 let mainWindow: BrowserWindow | null = null
 let alarmIntervalId: ReturnType<typeof setInterval> | null = null
+let scheduledTimers: ReturnType<typeof setTimeout>[] = []
 let awayCheckIntervalId: ReturnType<typeof setInterval> | null = null
 let awayAlertSent = false
 let morningAlertSentDate = ''
@@ -224,15 +225,78 @@ function sendSlackNotification(settings: Settings, message: string): Promise<boo
   return sendSlackWebhook(settings.slackWebhookUrl, message)
 }
 
+function sendScheduleNotification(schedule: Schedule, missed: boolean, settings: Settings): void {
+  const timingText = settings.alertTiming > 0 ? ` (${settings.alertTiming}분 전)` : ''
+  const title = missed ? `📌 놓친 일정 알림` : `📌 일정 알림${timingText}`
+
+  if (settings.macNotification) {
+    new Notification({
+      title: `${title} ${schedule.date} ${schedule.time}`,
+      body: schedule.content,
+      sound: 'default'
+    }).show()
+  }
+
+  if (settings.slackEnabled) {
+    const prefix = missed ? `📌 *놓친 일정 알림*` : `📌 *일정 알림${timingText}*`
+    sendSlackNotification(
+      settings,
+      `${prefix}\n${schedule.content}\n📅 ${schedule.date} ${schedule.time}`
+    )
+  }
+
+  const data = readData()
+  const target = data.schedules.find((s) => s.id === schedule.id)
+  if (target) {
+    target.notified = true
+    writeData(data)
+    sendToAllWindows('schedules-updated', data.schedules)
+  }
+}
+
+function scheduleExactTimers(): void {
+  // 기존 타이머 모두 제거
+  scheduledTimers.forEach((t) => clearTimeout(t))
+  scheduledTimers = []
+
+  const data = readData()
+  const { settings } = data
+  const now = new Date()
+  const alertOffset = settings.alertTiming * 60 * 1000
+
+  data.schedules.forEach((schedule) => {
+    if (schedule.notified) return
+
+    const scheduleTime = new Date(schedule.datetime)
+    const alertTime = new Date(scheduleTime.getTime() - alertOffset)
+    const diff = alertTime.getTime() - now.getTime()
+
+    if (diff <= 0) {
+      // 이미 지난 알림 → 즉시 발송 (놓친 알림)
+      sendScheduleNotification(schedule, diff < -60000, settings)
+    } else if (diff <= 24 * 60 * 60 * 1000) {
+      // 24시간 이내 알림 → 정확한 시간에 setTimeout 예약
+      const timer = setTimeout(() => {
+        sendScheduleNotification(schedule, false, readData().settings)
+      }, diff)
+      scheduledTimers.push(timer)
+    }
+    // 24시간 이후 일정은 주기적 체크(setInterval)에서 재설정됨
+  })
+}
+
 function startAlarmChecker(): void {
   const data = readData()
   const interval = data.settings.checkInterval
 
+  // 정확한 시간에 알림 예약
+  scheduleExactTimers()
+
+  // 주기적 체크 (하루 시작 알림 + 새로 추가된 일정 반영)
   alarmIntervalId = setInterval(() => {
     const data = readData()
     const { settings } = data
     const now = new Date()
-    let updated = false
 
     // 하루 시작 알림
     const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
@@ -259,41 +323,8 @@ function startAlarmChecker(): void {
       }
     }
 
-    data.schedules.forEach((schedule) => {
-      if (schedule.notified) return
-
-      const scheduleTime = new Date(schedule.datetime)
-      const alertOffset = settings.alertTiming * 60 * 1000
-      const alertTime = new Date(scheduleTime.getTime() - alertOffset)
-      const diff = alertTime.getTime() - now.getTime()
-
-      if (diff <= 60000 && diff > -60000) {
-        const timingText = settings.alertTiming > 0 ? ` (${settings.alertTiming}분 전)` : ''
-
-        if (settings.macNotification) {
-          new Notification({
-            title: `📌 일정 알림${timingText}`,
-            body: schedule.content,
-            sound: 'default'
-          }).show()
-        }
-
-        if (settings.slackEnabled) {
-          sendSlackNotification(
-            settings,
-            `📌 *일정 알림${timingText}*\n${schedule.content}\n📅 ${schedule.date} ${schedule.time}`
-          )
-        }
-
-        schedule.notified = true
-        updated = true
-      }
-    })
-
-    if (updated) {
-      writeData(data)
-      sendToAllWindows('schedules-updated', data.schedules)
-    }
+    // 새로 추가된 일정 반영을 위해 타이머 재설정
+    scheduleExactTimers()
   }, interval)
 }
 
@@ -413,6 +444,7 @@ ipcMain.handle('save-schedules', (_, schedules: Schedule[]) => {
   data.schedules = schedules
   writeData(data)
   sendToAllWindows('schedules-updated', schedules)
+  scheduleExactTimers()
   return true
 })
 ipcMain.handle('get-memos', () => readData().memos)
@@ -464,9 +496,15 @@ ipcMain.handle('test-notification', () => {
     return { success: false }
   }
   return new Promise<{ success: boolean }>((resolve) => {
+    const data = readData()
+    const { settings } = data
+    const now = new Date()
+    const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+    const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
+    const timingText = settings.alertTiming > 0 ? ` (${settings.alertTiming}분 전)` : ''
     const notif = new Notification({
-      title: '🔔 테스트 알림',
-      body: '알림이 정상적으로 동작합니다!',
+      title: `📌 일정 알림${timingText} ${dateStr} ${timeStr}`,
+      body: '알림 테스트',
       sound: 'default'
     })
     notif.on('show', () => resolve({ success: true }))

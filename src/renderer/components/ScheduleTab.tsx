@@ -277,7 +277,13 @@ export default function ScheduleTab({ schedules, onSave, settings, onSettingsCha
         <>
           <div className="picker-overlay" onClick={() => setShowSettings(false)} />
           <div className="settings-modal">
-            <div className="settings-modal-title">알림 설정</div>
+            <div className="settings-modal-title">
+              <span className="settings-tooltip-wrap">
+                <span className="settings-tooltip-icon">?</span>
+                <span className="settings-tooltip-text">잠자기 상태에서는 알림이 발송되지 않습니다.<br />놓친 알림은 복귀 시 자동으로 발송됩니다.</span>
+              </span>
+              알림 설정
+            </div>
             <div className="settings-row">
               <label>macOS 알림</label>
               <div
@@ -299,6 +305,19 @@ export default function ScheduleTab({ schedules, onSave, settings, onSettingsCha
                 <option value={30}>30분 전</option>
               </select>
             </div>
+            <div className="settings-row">
+              <label>감지 간격</label>
+              <select
+                value={settings.checkInterval}
+                onChange={(e) => onSettingsChange({ checkInterval: Number(e.target.value) })}
+              >
+                <option value={30000}>30초</option>
+                <option value={60000}>1분</option>
+                <option value={180000}>3분</option>
+                <option value={300000}>5분</option>
+              </select>
+            </div>
+            <hr className="settings-divider" />
             <div className="settings-row">
               <label>오늘 일정 알림</label>
               <div
