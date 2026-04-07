@@ -1206,7 +1206,7 @@ input:focus, textarea:focus {
 .inline-tooltip-text {
   display: none;
   position: absolute;
-  left: 0;
+  left: -10px;
   top: 110%;
   background: #1a1a2e;
   border: 1px solid #e94560;
@@ -1214,8 +1214,7 @@ input:focus, textarea:focus {
   padding: 8px 12px;
   font-size: 11px;
   color: #ccc;
-  white-space: normal;
-  width: 220px;
+  white-space: nowrap;
   z-index: 100;
   line-height: 1.6;
 }

@@ -299,7 +299,7 @@ export default function ScheduleTab({ schedules, onSave, settings, onSettingsCha
                 알림 타이밍
                 <span className="inline-tooltip-wrap">
                   <span className="inline-tooltip-icon">?</span>
-                  <span className="inline-tooltip-text">일정 시각 기준으로 얼마나 미리 알릴지 설정합니다. (예시: 30분 전 → 13:00 일정이면 12:30에 알림)</span>
+                  <span className="inline-tooltip-text">일정 시각 기준으로 얼마나 미리 알릴지 설정합니다.<br/>(예시: 30분 전 → 13:00 일정이면 12:30에 알림)</span>
                 </span>
               </label>
               <select
