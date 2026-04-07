@@ -16,7 +16,7 @@ export interface Memo {
 export type SlackMethod = 'webhook' | 'bot'
 
 export interface Settings {
-  checkInterval: number // ms (30000, 60000, 300000)
+  checkInterval: number // ms (1800000 ~ 86400000)
   macNotification: boolean
   alertTiming: number // 분 단위 (0 = 정시, 5, 10, 30)
   morningAlertEnabled: boolean
@@ -29,7 +29,7 @@ export interface Settings {
 }
 
 export const DEFAULT_SETTINGS: Settings = {
-  checkInterval: 30000,
+  checkInterval: 43200000,
   macNotification: true,
   alertTiming: 0,
   morningAlertEnabled: false,
@@ -72,6 +72,7 @@ export interface AppData {
   memos: Memo[]
   settings: Settings
   awayCheck: AwayCheckSettings
+  morningAlertSentDate?: string
 }
 
 export interface ElectronAPI {

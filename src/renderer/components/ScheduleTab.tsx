@@ -295,7 +295,13 @@ export default function ScheduleTab({ schedules, onSave, settings, onSettingsCha
               </div>
             </div>
             <div className="settings-row">
-              <label>알림 타이밍</label>
+              <label className="label-with-tooltip">
+                알림 타이밍
+                <span className="inline-tooltip-wrap">
+                  <span className="inline-tooltip-icon">?</span>
+                  <span className="inline-tooltip-text">일정 시각 기준으로 얼마나 미리 알릴지 설정합니다. (예시: 30분 전 → 13:00 일정이면 12:30에 알림)</span>
+                </span>
+              </label>
               <select
                 value={settings.alertTiming}
                 onChange={(e) => onSettingsChange({ alertTiming: Number(e.target.value) })}
@@ -306,21 +312,15 @@ export default function ScheduleTab({ schedules, onSave, settings, onSettingsCha
                 <option value={30}>30분 전</option>
               </select>
             </div>
-            <div className="settings-row">
-              <label>감지 간격</label>
-              <select
-                value={settings.checkInterval}
-                onChange={(e) => onSettingsChange({ checkInterval: Number(e.target.value) })}
-              >
-                <option value={30000}>30초</option>
-                <option value={60000}>1분</option>
-                <option value={180000}>3분</option>
-                <option value={300000}>5분</option>
-              </select>
-            </div>
             <hr className="settings-divider" />
             <div className="settings-row">
-              <label>오늘 일정 알림</label>
+              <label className="label-with-tooltip">
+                오늘 일정 알림
+                <span className="inline-tooltip-wrap">
+                  <span className="inline-tooltip-icon">?</span>
+                  <span className="inline-tooltip-text">설정한 시각에 오늘 등록된 일정을<br />한눈에 요약해서 알려줍니다.<br />하루에 한 번만 발송됩니다.</span>
+                </span>
+              </label>
               <div
                 className={`toggle ${settings.morningAlertEnabled ? 'on' : ''}`}
                 onClick={() => onSettingsChange({ morningAlertEnabled: !settings.morningAlertEnabled })}

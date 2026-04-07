@@ -257,6 +257,13 @@ function sendScheduleNotification(schedule: Schedule, missed: boolean, settings:
   }
 }
 
+function saveMorningAlertSentDate(dateStr: string): void {
+  morningAlertSentDate = dateStr
+  const data = readData()
+  data.morningAlertSentDate = dateStr
+  writeData(data)
+}
+
 function scheduleMorningAlert(): void {
   if (morningAlertTimer) {
     clearTimeout(morningAlertTimer)
@@ -291,7 +298,7 @@ function scheduleMorningAlert(): void {
         sendSlackNotification(settings, `📋 *오늘 일정 (${todaySchedules.length}건)*\n${body}`)
       }
     }
-    morningAlertSentDate = todayStr
+    saveMorningAlertSentDate(todayStr)
   } else if (diff <= 0) {
     // 지금이 알림 시각 ~ +2분 이내 → 즉시 발송
     const todaySchedules = data.schedules.filter((s) => s.date === todayStr)
@@ -308,7 +315,7 @@ function scheduleMorningAlert(): void {
         sendSlackNotification(settings, `📋 *오늘 일정 (${todaySchedules.length}건)*\n${body}`)
       }
     }
-    morningAlertSentDate = todayStr
+    saveMorningAlertSentDate(todayStr)
   } else {
     // 아직 알림 시각 전 → 정확한 시각에 setTimeout 예약
     morningAlertTimer = setTimeout(() => {
@@ -330,7 +337,7 @@ function scheduleMorningAlert(): void {
           sendSlackNotification(settings, `📋 *오늘 일정 (${todaySchedules.length}건)*\n${body}`)
         }
       }
-      morningAlertSentDate = todayStr
+      saveMorningAlertSentDate(todayStr)
     }, diff)
   }
 }
@@ -477,6 +484,7 @@ if (process.platform === 'darwin') {
 
 app.whenReady().then(() => {
   dataPath = path.join(app.getPath('userData'), 'data.json')
+  morningAlertSentDate = readData().morningAlertSentDate || ''
   createTray()
   createPopupWindow()
   startAlarmChecker()
@@ -513,12 +521,8 @@ ipcMain.handle('save-memos', (_, memos: Memo[]) => {
 ipcMain.handle('get-settings', () => readData().settings)
 ipcMain.handle('save-settings', (_, settings: Settings) => {
   const data = readData()
-  const intervalChanged = data.settings.checkInterval !== settings.checkInterval
   data.settings = settings
   writeData(data)
-  if (intervalChanged) {
-    restartAlarmChecker()
-  }
   return true
 })
 

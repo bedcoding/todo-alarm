@@ -1174,6 +1174,56 @@ input:focus, textarea:focus {
   display: block;
 }
 
+.label-with-tooltip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.inline-tooltip-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.inline-tooltip-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1px solid #555;
+  color: #888;
+  font-size: 10px;
+  cursor: help;
+}
+
+.inline-tooltip-wrap:hover .inline-tooltip-icon {
+  color: #e0e0e0;
+  border-color: #e94560;
+}
+
+.inline-tooltip-text {
+  display: none;
+  position: absolute;
+  left: 0;
+  top: 110%;
+  background: #1a1a2e;
+  border: 1px solid #e94560;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 11px;
+  color: #ccc;
+  white-space: normal;
+  width: 220px;
+  z-index: 100;
+  line-height: 1.6;
+}
+
+.inline-tooltip-wrap:hover .inline-tooltip-text {
+  display: block;
+}
+
 .settings-modal .settings-row {
   border-bottom: none;
 }
