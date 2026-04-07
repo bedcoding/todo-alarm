@@ -29,6 +29,7 @@ let popupWindow: BrowserWindow | null = null
 let mainWindow: BrowserWindow | null = null
 let alarmIntervalId: ReturnType<typeof setInterval> | null = null
 let scheduledTimers: ReturnType<typeof setTimeout>[] = []
+let morningAlertTimer: ReturnType<typeof setTimeout> | null = null
 let awayCheckIntervalId: ReturnType<typeof setInterval> | null = null
 let awayAlertSent = false
 let morningAlertSentDate = ''
@@ -256,6 +257,84 @@ function sendScheduleNotification(schedule: Schedule, missed: boolean, settings:
   }
 }
 
+function scheduleMorningAlert(): void {
+  if (morningAlertTimer) {
+    clearTimeout(morningAlertTimer)
+    morningAlertTimer = null
+  }
+
+  const data = readData()
+  const { settings } = data
+  if (!settings.morningAlertEnabled) return
+
+  const now = new Date()
+  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+  if (morningAlertSentDate === todayStr) return
+
+  const [mh, mm] = settings.morningAlertTime.split(':').map(Number)
+  const morningTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), mh, mm)
+  const diff = morningTime.getTime() - now.getTime()
+
+  if (diff < -120000) {
+    // 2분 넘게 지남 → 놓친 알림으로 즉시 발송
+    const todaySchedules = data.schedules.filter((s) => s.date === todayStr)
+    if (todaySchedules.length > 0) {
+      const body = todaySchedules.map((s) => `${s.time} ${s.content}`).join('\n')
+      if (settings.macNotification) {
+        new Notification({
+          title: `📋 오늘 일정 (${todaySchedules.length}건)`,
+          body,
+          sound: 'default'
+        }).show()
+      }
+      if (settings.slackEnabled) {
+        sendSlackNotification(settings, `📋 *오늘 일정 (${todaySchedules.length}건)*\n${body}`)
+      }
+    }
+    morningAlertSentDate = todayStr
+  } else if (diff <= 0) {
+    // 지금이 알림 시각 ~ +2분 이내 → 즉시 발송
+    const todaySchedules = data.schedules.filter((s) => s.date === todayStr)
+    if (todaySchedules.length > 0) {
+      const body = todaySchedules.map((s) => `${s.time} ${s.content}`).join('\n')
+      if (settings.macNotification) {
+        new Notification({
+          title: `📋 오늘 일정 (${todaySchedules.length}건)`,
+          body,
+          sound: 'default'
+        }).show()
+      }
+      if (settings.slackEnabled) {
+        sendSlackNotification(settings, `📋 *오늘 일정 (${todaySchedules.length}건)*\n${body}`)
+      }
+    }
+    morningAlertSentDate = todayStr
+  } else {
+    // 아직 알림 시각 전 → 정확한 시각에 setTimeout 예약
+    morningAlertTimer = setTimeout(() => {
+      const data = readData()
+      const settings = data.settings
+      const now = new Date()
+      const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+      const todaySchedules = data.schedules.filter((s) => s.date === todayStr)
+      if (todaySchedules.length > 0) {
+        const body = todaySchedules.map((s) => `${s.time} ${s.content}`).join('\n')
+        if (settings.macNotification) {
+          new Notification({
+            title: `📋 오늘 일정 (${todaySchedules.length}건)`,
+            body,
+            sound: 'default'
+          }).show()
+        }
+        if (settings.slackEnabled) {
+          sendSlackNotification(settings, `📋 *오늘 일정 (${todaySchedules.length}건)*\n${body}`)
+        }
+      }
+      morningAlertSentDate = todayStr
+    }, diff)
+  }
+}
+
 function scheduleExactTimers(): void {
   // 기존 타이머 모두 제거
   scheduledTimers.forEach((t) => clearTimeout(t))
@@ -293,40 +372,13 @@ function startAlarmChecker(): void {
 
   // 정확한 시간에 알림 예약
   scheduleExactTimers()
+  scheduleMorningAlert()
 
-  // 주기적 체크 (하루 시작 알림 + 새로 추가된 일정 반영)
+  // 주기적 체크 (새로 추가된 일정 반영)
   alarmIntervalId = setInterval(() => {
-    const data = readData()
-    const { settings } = data
-    const now = new Date()
-
-    // 하루 시작 알림
-    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
-    if (settings.morningAlertEnabled && morningAlertSentDate !== todayStr) {
-      const [mh, mm] = settings.morningAlertTime.split(':').map(Number)
-      const morningTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), mh, mm)
-      const morningDiff = now.getTime() - morningTime.getTime()
-      if (morningDiff >= 0 && morningDiff < 120000) {
-        const todaySchedules = data.schedules.filter((s) => s.date === todayStr)
-        if (todaySchedules.length > 0) {
-          const body = todaySchedules.map((s) => `${s.time} ${s.content}`).join('\n')
-          if (settings.macNotification) {
-            new Notification({
-              title: `📋 오늘 일정 (${todaySchedules.length}건)`,
-              body,
-              sound: 'default'
-            }).show()
-          }
-          if (settings.slackEnabled) {
-            sendSlackNotification(settings, `📋 *오늘 일정 (${todaySchedules.length}건)*\n${body}`)
-          }
-        }
-        morningAlertSentDate = todayStr
-      }
-    }
-
     // 새로 추가된 일정 반영을 위해 타이머 재설정
     scheduleExactTimers()
+    scheduleMorningAlert()
   }, interval)
 }
 
