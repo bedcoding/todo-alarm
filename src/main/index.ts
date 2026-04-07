@@ -13,7 +13,8 @@ function readData(): AppData {
       schedules: raw.schedules ?? [],
       memos: raw.memos ?? [],
       settings: { ...DEFAULT_SETTINGS, ...raw.settings },
-      awayCheck: { ...DEFAULT_AWAY_CHECK, ...raw.awayCheck }
+      awayCheck: { ...DEFAULT_AWAY_CHECK, ...raw.awayCheck },
+      morningAlertSentDate: raw.morningAlertSentDate
     }
   } catch {
     return { schedules: [], memos: [], settings: { ...DEFAULT_SETTINGS }, awayCheck: { ...DEFAULT_AWAY_CHECK } }
