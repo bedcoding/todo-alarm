@@ -11,8 +11,8 @@ npm run package
 ## 2. zip 생성
 
 ```bash
-cd dist
-zip -r -y "Todo-Alarm-{버전}-mac-arm64.zip" "mac-arm64/Todo Alarm.app"
+cd dist/mac-arm64
+zip -r -y "../Todo-Alarm-{버전}-mac-arm64.zip" "Todo Alarm.app"
 ```
 
 ## 3. GitHub Release 생성

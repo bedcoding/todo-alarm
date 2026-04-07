@@ -122,6 +122,7 @@ export default function SettingsTab({ settings, onSave }: SettingsTabProps) {
             </>
           )}
         </div>
+        <div className="version-info">v{__APP_VERSION__} ({__BUILD_DATE__})</div>
     </div>
   )
 }

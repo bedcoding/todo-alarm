@@ -1410,6 +1410,13 @@ input:focus, textarea:focus {
   cursor: not-allowed;
 }
 
+.version-info {
+  text-align: center;
+  color: #555;
+  font-size: 11px;
+  padding-top: 12px;
+}
+
 /* 저장 버튼 */
 .settings-footer {
   padding-top: 4px;
