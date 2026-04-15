@@ -286,7 +286,8 @@ input:focus, textarea:focus {
 
 .schedule-info {
   display: flex;
-  gap: 12px;
+  flex-wrap: wrap;
+  gap: 4px 12px;
   align-items: center;
   flex: 1;
   min-width: 0;
@@ -307,7 +308,7 @@ input:focus, textarea:focus {
 
 .schedule-content-wrap {
   position: relative;
-  flex: 1;
+  flex-basis: 100%;
   min-width: 0;
   display: flex;
 }
