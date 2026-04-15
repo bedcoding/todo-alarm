@@ -347,6 +347,11 @@ input:focus, textarea:focus {
   display: block;
 }
 
+.schedule-item:last-child .schedule-content-tooltip {
+  top: auto;
+  bottom: 110%;
+}
+
 .edit-btn {
   background: none;
   border: none;
@@ -576,6 +581,14 @@ input:focus, textarea:focus {
   gap: 8px;
 }
 
+.memo-content-wrap {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  cursor: pointer;
+}
+
 .memo-content-inline {
   flex: 1;
   font-size: 13px;
@@ -583,6 +596,36 @@ input:focus, textarea:focus {
   overflow: hidden;
   text-overflow: ellipsis;
   min-width: 0;
+}
+
+.memo-content-tooltip {
+  display: none;
+  position: absolute;
+  left: 0;
+  top: 110%;
+  background: #1a1a2e;
+  border: 1px solid #e94560;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 12px;
+  color: #e0e0e0;
+  line-height: 1.5;
+  max-width: 320px;
+  width: max-content;
+  word-break: break-word;
+  white-space: pre-wrap;
+  z-index: 100;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  pointer-events: none;
+}
+
+.memo-content-wrap:hover .memo-content-tooltip {
+  display: block;
+}
+
+.memo-item:last-child .memo-content-tooltip {
+  top: auto;
+  bottom: 110%;
 }
 
 .memo-content {

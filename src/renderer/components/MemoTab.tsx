@@ -91,7 +91,10 @@ export default function MemoTab({ memos, onSave }: MemoTabProps) {
                   autoFocus
                 />
               ) : (
-                <span className="memo-content-inline" onClick={() => startEdit(m)}>{m.content}</span>
+                <span className="memo-content-wrap" onClick={() => startEdit(m)}>
+                  <span className="memo-content-inline">{m.content}</span>
+                  <span className="memo-content-tooltip">{m.content}</span>
+                </span>
               )}
               <div className="memo-actions">
                 <button className="move-btn" onClick={() => moveMemo(m.id, -1)} disabled={i === 0}>▲</button>
