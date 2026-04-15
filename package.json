@@ -1,6 +1,6 @@
 {
   "name": "todo-alarm",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "main": "./out/main/index.js",
   "scripts": {
     "dev": "electron-vite dev",

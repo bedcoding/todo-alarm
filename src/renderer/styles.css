@@ -305,11 +305,45 @@ input:focus, textarea:focus {
   white-space: nowrap;
 }
 
+.schedule-content-wrap {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+}
+
 .schedule-content {
   font-size: 14px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+
+.schedule-content-tooltip {
+  display: none;
+  position: absolute;
+  left: 0;
+  top: 110%;
+  background: #1a1a2e;
+  border: 1px solid #e94560;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 12px;
+  color: #e0e0e0;
+  line-height: 1.5;
+  max-width: 320px;
+  width: max-content;
+  word-break: break-word;
+  white-space: pre-wrap;
+  z-index: 100;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  pointer-events: none;
+}
+
+.schedule-content-wrap:hover .schedule-content-tooltip {
+  display: block;
 }
 
 .edit-btn {

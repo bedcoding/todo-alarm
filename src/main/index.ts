@@ -139,6 +139,10 @@ function togglePopup(): void {
     return
   }
 
+  // 팝업 열 때 놓친 알림 catch-up
+  scheduleExactTimers()
+  scheduleMorningAlert()
+
   const trayBounds = tray!.getBounds()
   const windowBounds = popupWindow!.getBounds()
   const display = screen.getDisplayNearestPoint({ x: trayBounds.x, y: trayBounds.y })
@@ -494,6 +498,11 @@ app.whenReady().then(() => {
   powerMonitor.on('resume', () => {
     restartAlarmChecker()
     startAwayChecker()
+  })
+
+  powerMonitor.on('unlock-screen', () => {
+    scheduleExactTimers()
+    scheduleMorningAlert()
   })
 })
 
