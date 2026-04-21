@@ -9,9 +9,17 @@ function getToday(): string {
   return d.toISOString().split('T')[0]
 }
 
-function getNowTime(): string {
+function getNowHour(): string {
   const d = new Date()
-  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+  return `${String(d.getHours()).padStart(2, '0')}:00`
+}
+
+function getSavedDate(): string {
+  try {
+    const saved = localStorage.getItem('schedule-last-date')
+    if (saved === getToday()) return saved
+  } catch {}
+  return getToday()
 }
 
 interface ScheduleTabProps {
@@ -23,8 +31,8 @@ interface ScheduleTabProps {
 }
 
 export default function ScheduleTab({ schedules, onSave, settings, onSettingsChange, isPopup }: ScheduleTabProps) {
-  const [date, setDate] = useState(getToday)
-  const [time, setTime] = useState(getNowTime)
+  const [date, setDate] = useState(getSavedDate)
+  const [time, setTime] = useState(getNowHour)
   const [content, setContent] = useState('')
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
   const [showCalendar, setShowCalendar] = useState(false)
@@ -38,6 +46,10 @@ export default function ScheduleTab({ schedules, onSave, settings, onSettingsCha
   const [editContent, setEditContent] = useState('')
   const [listAtBottom, setListAtBottom] = useState(false)
   const listRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    localStorage.setItem('schedule-last-date', getToday())
+  }, [])
 
   const checkScrollBottom = useCallback(() => {
     const el = listRef.current
@@ -69,8 +81,6 @@ export default function ScheduleTab({ schedules, onSave, settings, onSettingsCha
     }
 
     onSave([...schedules, newSchedule])
-    setDate(getToday())
-    setTime(getNowTime())
     setContent('')
   }
 
