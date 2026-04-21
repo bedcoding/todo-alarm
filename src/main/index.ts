@@ -1,7 +1,7 @@
 import { app, BrowserWindow, ipcMain, Menu, Notification, Tray, nativeImage, screen, net, powerMonitor } from 'electron'
 import path from 'path'
 import fs from 'fs'
-import type { AppData, Schedule, Memo, Settings, AwayCheckSettings } from '../types'
+import type { AppData, Schedule, Memo, Settings, AwayCheckSettings, TrashItem } from '../types'
 import { DEFAULT_SETTINGS, DEFAULT_AWAY_CHECK } from '../types'
 
 let dataPath: string
@@ -14,10 +14,11 @@ function readData(): AppData {
       memos: raw.memos ?? [],
       settings: { ...DEFAULT_SETTINGS, ...raw.settings },
       awayCheck: { ...DEFAULT_AWAY_CHECK, ...raw.awayCheck },
-      morningAlertSentDate: raw.morningAlertSentDate
+      morningAlertSentDate: raw.morningAlertSentDate,
+      trash: raw.trash ?? []
     }
   } catch {
-    return { schedules: [], memos: [], settings: { ...DEFAULT_SETTINGS }, awayCheck: { ...DEFAULT_AWAY_CHECK } }
+    return { schedules: [], memos: [], settings: { ...DEFAULT_SETTINGS }, awayCheck: { ...DEFAULT_AWAY_CHECK }, trash: [] }
   }
 }
 
@@ -347,6 +348,17 @@ function scheduleMorningAlert(): void {
   }
 }
 
+function cleanupTrash(): void {
+  const data = readData()
+  const now = Date.now()
+  const filtered = data.trash.filter((t) => now - new Date(t.deletedAt).getTime() < 86400000)
+  if (filtered.length !== data.trash.length) {
+    data.trash = filtered
+    writeData(data)
+    sendToAllWindows('trash-updated', filtered)
+  }
+}
+
 function scheduleExactTimers(): void {
   // 기존 타이머 모두 제거
   scheduledTimers.forEach((t) => clearTimeout(t))
@@ -391,6 +403,7 @@ function startAlarmChecker(): void {
     // 새로 추가된 일정 반영을 위해 타이머 재설정
     scheduleExactTimers()
     scheduleMorningAlert()
+    cleanupTrash()
   }, interval)
 }
 
@@ -490,6 +503,7 @@ if (process.platform === 'darwin') {
 app.whenReady().then(() => {
   dataPath = path.join(app.getPath('userData'), 'data.json')
   morningAlertSentDate = readData().morningAlertSentDate || ''
+  cleanupTrash()
   createTray()
   createPopupWindow()
   startAlarmChecker()
@@ -543,6 +557,15 @@ ipcMain.handle('save-away-check', (_, awayCheck: AwayCheckSettings) => {
   writeData(data)
   sendToAllWindows('away-check-updated', awayCheck)
   startAwayChecker()
+  return true
+})
+
+ipcMain.handle('get-trash', () => readData().trash)
+ipcMain.handle('save-trash', (_, trash: TrashItem[]) => {
+  const data = readData()
+  data.trash = trash
+  writeData(data)
+  sendToAllWindows('trash-updated', trash)
   return true
 })
 

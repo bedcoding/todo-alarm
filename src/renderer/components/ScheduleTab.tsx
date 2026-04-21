@@ -25,12 +25,13 @@ function getSavedDate(): string {
 interface ScheduleTabProps {
   schedules: Schedule[]
   onSave: (schedules: Schedule[]) => void
+  onDelete: (id: number) => void
   settings: Settings
   onSettingsChange: (patch: Partial<Settings>) => void
   isPopup: boolean
 }
 
-export default function ScheduleTab({ schedules, onSave, settings, onSettingsChange, isPopup }: ScheduleTabProps) {
+export default function ScheduleTab({ schedules, onSave, onDelete, settings, onSettingsChange, isPopup }: ScheduleTabProps) {
   const [date, setDate] = useState(getSavedDate)
   const [time, setTime] = useState(getNowHour)
   const [content, setContent] = useState('')
@@ -85,7 +86,7 @@ export default function ScheduleTab({ schedules, onSave, settings, onSettingsCha
   }
 
   const removeSchedule = (id: number) => {
-    onSave(schedules.filter((s) => s.id !== id))
+    onDelete(id)
   }
 
   const startEdit = (s: Schedule) => {

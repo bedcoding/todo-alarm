@@ -67,12 +67,20 @@ export const DEFAULT_AWAY_CHECK: AwayCheckSettings = {
   excludeDays: [0, 6],
 }
 
+export interface TrashItem {
+  id: number
+  type: 'schedule' | 'memo'
+  data: Schedule | Memo
+  deletedAt: string
+}
+
 export interface AppData {
   schedules: Schedule[]
   memos: Memo[]
   settings: Settings
   awayCheck: AwayCheckSettings
   morningAlertSentDate?: string
+  trash: TrashItem[]
 }
 
 export interface ElectronAPI {
@@ -93,6 +101,9 @@ export interface ElectronAPI {
   onAwayCheckUpdated: (callback: (awayCheck: AwayCheckSettings) => void) => void
   onIdleStatus: (callback: (data: { idleSeconds: number; limitSeconds: number; excluded?: boolean }) => void) => void
   setPinned: (pinned: boolean) => Promise<boolean>
+  getTrash: () => Promise<TrashItem[]>
+  saveTrash: (trash: TrashItem[]) => Promise<boolean>
+  onTrashUpdated: (callback: (trash: TrashItem[]) => void) => void
 }
 
 declare global {

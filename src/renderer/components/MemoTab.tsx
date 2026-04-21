@@ -5,9 +5,10 @@ import type { Memo } from '../../types'
 interface MemoTabProps {
   memos: Memo[]
   onSave: (memos: Memo[]) => void
+  onDelete: (id: number) => void
 }
 
-export default function MemoTab({ memos, onSave }: MemoTabProps) {
+export default function MemoTab({ memos, onSave, onDelete }: MemoTabProps) {
   const [content, setContent] = useState('')
   const [editingId, setEditingId] = useState<number | null>(null)
   const [editContent, setEditContent] = useState('')
@@ -42,7 +43,7 @@ export default function MemoTab({ memos, onSave }: MemoTabProps) {
   }
 
   const removeMemo = (id: number) => {
-    onSave(memos.filter((m) => m.id !== id))
+    onDelete(id)
   }
 
   const startEdit = (m: Memo) => {

@@ -1,14 +1,15 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import ScheduleTab from './components/ScheduleTab'
 import MemoTab from './components/MemoTab'
 import AwayCheckTab from './components/AwayCheckTab'
 import SettingsTab from './components/SettingsTab'
-import type { Schedule, Memo, Settings, AwayCheckSettings } from '../types'
+import TrashTab from './components/TrashTab'
+import type { Schedule, Memo, Settings, AwayCheckSettings, TrashItem } from '../types'
 import { DEFAULT_SETTINGS, DEFAULT_AWAY_CHECK } from '../types'
 
 const isPopup = window.location.hash === '#popup'
 
-type TabType = 'schedule' | 'memo' | 'awaycheck' | 'settings'
+type TabType = 'schedule' | 'memo' | 'awaycheck' | 'settings' | 'trash'
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<TabType>('schedule')
@@ -16,19 +17,24 @@ export default function App() {
   const [memos, setMemos] = useState<Memo[]>([])
   const [settings, setSettings] = useState<Settings>({ ...DEFAULT_SETTINGS })
   const [awayCheck, setAwayCheck] = useState<AwayCheckSettings>({ ...DEFAULT_AWAY_CHECK })
+  const [trash, setTrash] = useState<TrashItem[]>([])
   const [idleSeconds, setIdleSeconds] = useState(0)
   const [pinned, setPinned] = useState(false)
+  const [toast, setToast] = useState<{ message: string; onUndo: () => void } | null>(null)
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     window.api.getSchedules().then(setSchedules)
     window.api.getMemos().then(setMemos)
     window.api.getSettings().then(setSettings)
     window.api.getAwayCheck().then(setAwayCheck)
+    window.api.getTrash().then(setTrash)
 
     window.api.onSchedulesUpdated((updated) => setSchedules(updated))
     window.api.onMemosUpdated((updated) => setMemos(updated))
     window.api.onAwayCheckUpdated((updated) => setAwayCheck(updated))
     window.api.onIdleStatus((data) => setIdleSeconds(data.idleSeconds))
+    window.api.onTrashUpdated((updated) => setTrash(updated))
   }, [])
 
   const saveSchedules = async (newSchedules: Schedule[]) => {
@@ -49,6 +55,62 @@ export default function App() {
   const saveAwayCheck = async (newAwayCheck: AwayCheckSettings) => {
     setAwayCheck(newAwayCheck)
     await window.api.saveAwayCheck(newAwayCheck)
+  }
+
+  const saveTrash = async (newTrash: TrashItem[]) => {
+    setTrash(newTrash)
+    await window.api.saveTrash(newTrash)
+  }
+
+  const showUndoToast = (message: string, onUndo: () => void) => {
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current)
+    setToast({ message, onUndo })
+    toastTimerRef.current = setTimeout(() => setToast(null), 5000)
+  }
+
+  const deleteSchedule = async (id: number) => {
+    const target = schedules.find((s) => s.id === id)
+    if (!target) return
+    const newSchedules = schedules.filter((s) => s.id !== id)
+    const trashItem: TrashItem = { id: Date.now(), type: 'schedule', data: target, deletedAt: new Date().toISOString() }
+    const newTrash = [...trash, trashItem]
+    await saveSchedules(newSchedules)
+    await saveTrash(newTrash)
+    showUndoToast('일정이 삭제되었습니다', async () => {
+      await saveSchedules([...newSchedules, target])
+      await saveTrash(newTrash.filter((t) => t.id !== trashItem.id))
+    })
+  }
+
+  const deleteMemo = async (id: number) => {
+    const target = memos.find((m) => m.id === id)
+    if (!target) return
+    const newMemos = memos.filter((m) => m.id !== id)
+    const trashItem: TrashItem = { id: Date.now(), type: 'memo', data: target, deletedAt: new Date().toISOString() }
+    const newTrash = [...trash, trashItem]
+    await saveMemos(newMemos)
+    await saveTrash(newTrash)
+    showUndoToast('메모가 삭제되었습니다', async () => {
+      await saveMemos([...newMemos, target])
+      await saveTrash(newTrash.filter((t) => t.id !== trashItem.id))
+    })
+  }
+
+  const restoreFromTrash = async (item: TrashItem) => {
+    if (item.type === 'schedule') {
+      await saveSchedules([...schedules, item.data as Schedule])
+    } else {
+      await saveMemos([item.data as Memo, ...memos])
+    }
+    await saveTrash(trash.filter((t) => t.id !== item.id))
+  }
+
+  const permanentDelete = async (trashItemId: number) => {
+    await saveTrash(trash.filter((t) => t.id !== trashItemId))
+  }
+
+  const emptyTrash = async () => {
+    await saveTrash([])
   }
 
   const handleOpenMain = () => {
@@ -103,6 +165,13 @@ export default function App() {
         >
           슬랙
         </button>
+        <button
+          className={`tab trash-btn ${activeTab === 'trash' ? 'active' : ''}`}
+          onClick={() => setActiveTab(activeTab === 'trash' ? 'schedule' : 'trash')}
+          title="휴지통"
+        >
+          🗑️{trash.length > 0 && <span className="trash-badge">{trash.length}</span>}
+        </button>
         {isPopup && (
           <>
             <button
@@ -124,10 +193,10 @@ export default function App() {
       </div>
       <div className="content">
         <div className={`tab-panel ${activeTab === 'schedule' ? 'active' : ''}`}>
-          <ScheduleTab schedules={schedules} onSave={saveSchedules} settings={settings} onSettingsChange={(patch) => saveSettings({ ...settings, ...patch })} isPopup={isPopup} />
+          <ScheduleTab schedules={schedules} onSave={saveSchedules} onDelete={deleteSchedule} settings={settings} onSettingsChange={(patch) => saveSettings({ ...settings, ...patch })} isPopup={isPopup} />
         </div>
         <div className={`tab-panel ${activeTab === 'memo' ? 'active' : ''}`}>
-          <MemoTab memos={memos} onSave={saveMemos} />
+          <MemoTab memos={memos} onSave={saveMemos} onDelete={deleteMemo} />
         </div>
         <div className={`tab-panel ${activeTab === 'awaycheck' ? 'active' : ''}`}>
           <AwayCheckTab awayCheck={awayCheck} onSave={saveAwayCheck} />
@@ -135,7 +204,16 @@ export default function App() {
         <div className={`tab-panel ${activeTab === 'settings' ? 'active' : ''}`}>
           <SettingsTab settings={settings} onSave={saveSettings} />
         </div>
+        <div className={`tab-panel ${activeTab === 'trash' ? 'active' : ''}`}>
+          <TrashTab trash={trash} onRestore={restoreFromTrash} onPermanentDelete={permanentDelete} onEmptyAll={emptyTrash} />
+        </div>
       </div>
+      {toast && (
+        <div className="undo-toast">
+          <span>{toast.message}</span>
+          <button onClick={() => { toast.onUndo(); setToast(null); if (toastTimerRef.current) clearTimeout(toastTimerRef.current) }}>되돌리기</button>
+        </div>
+      )}
     </div>
   )
 }

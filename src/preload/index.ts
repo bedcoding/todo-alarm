@@ -25,5 +25,10 @@ contextBridge.exposeInMainWorld('api', {
   onIdleStatus: (callback: (data: unknown) => void) => {
     ipcRenderer.on('idle-status', (_, data) => callback(data))
   },
-  setPinned: (pinned: boolean) => ipcRenderer.invoke('set-pinned', pinned)
+  setPinned: (pinned: boolean) => ipcRenderer.invoke('set-pinned', pinned),
+  getTrash: () => ipcRenderer.invoke('get-trash'),
+  saveTrash: (trash: unknown[]) => ipcRenderer.invoke('save-trash', trash),
+  onTrashUpdated: (callback: (trash: unknown[]) => void) => {
+    ipcRenderer.on('trash-updated', (_, trash) => callback(trash))
+  }
 })
