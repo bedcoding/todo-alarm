@@ -33,6 +33,7 @@ let alarmIntervalId: ReturnType<typeof setInterval> | null = null
 let scheduledTimers: ReturnType<typeof setTimeout>[] = []
 let morningAlertTimer: ReturnType<typeof setTimeout> | null = null
 let awayCheckIntervalId: ReturnType<typeof setInterval> | null = null
+let trashTimers: ReturnType<typeof setTimeout>[] = []
 let awayAlertSent = false
 let morningAlertSentDate = ''
 let lastBlurTime = 0
@@ -349,14 +350,26 @@ function scheduleMorningAlert(): void {
 }
 
 function cleanupTrash(): void {
+  trashTimers.forEach((t) => clearTimeout(t))
+  trashTimers = []
+
   const data = readData()
   const now = Date.now()
+
+  // 이미 만료된 항목 즉시 제거
   const filtered = data.trash.filter((t) => now - new Date(t.deletedAt).getTime() < 86400000)
   if (filtered.length !== data.trash.length) {
     data.trash = filtered
     writeData(data)
     sendToAllWindows('trash-updated', filtered)
   }
+
+  // 아직 만료 안 된 항목 → 정확한 시각에 setTimeout 예약
+  filtered.forEach((t) => {
+    const remaining = 86400000 - (now - new Date(t.deletedAt).getTime())
+    const timer = setTimeout(() => cleanupTrash(), remaining)
+    trashTimers.push(timer)
+  })
 }
 
 function scheduleExactTimers(): void {
