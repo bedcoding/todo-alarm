@@ -249,14 +249,12 @@ input:focus, textarea:focus {
 }
 
 .schedule-list {
-  flex: 1;
+  height: 100%;
   overflow-y: scroll;
   display: flex;
   flex-direction: column;
   gap: 8px;
   padding-bottom: 4px;
-  mask-image: linear-gradient(to bottom, #000 calc(100% - 30px), transparent);
-  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 30px), transparent);
 }
 
 
@@ -557,14 +555,13 @@ input:focus, textarea:focus {
 }
 
 .memo-list {
-  flex: 1;
+  height: 100%;
   overflow-y: scroll;
   display: flex;
   flex-direction: column;
   gap: 8px;
-  mask-image: linear-gradient(to bottom, #000 calc(100% - 30px), transparent);
-  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 30px), transparent);
 }
+
 
 
 .memo-item {
@@ -1810,5 +1807,29 @@ input:focus, textarea:focus {
   line-height: 28px;
   color: #e0e0e0;
   font-variant-numeric: tabular-nums;
+}
+
+/* 스크롤 하단 페이드 (공통) */
+.scroll-fade-wrapper {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  min-height: 0;
+}
+.scroll-fade-wrapper::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 30px;
+  background: linear-gradient(to bottom, transparent, #1a1a2e);
+  pointer-events: none;
+  z-index: 1;
+  opacity: 1;
+  transition: opacity 0.3s ease;
+}
+.scroll-fade-wrapper.at-bottom::after {
+  opacity: 0;
 }
 

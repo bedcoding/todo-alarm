@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import EmptyBell from './EmptyBell'
 import type { Memo } from '../../types'
 
@@ -11,6 +11,24 @@ export default function MemoTab({ memos, onSave }: MemoTabProps) {
   const [content, setContent] = useState('')
   const [editingId, setEditingId] = useState<number | null>(null)
   const [editContent, setEditContent] = useState('')
+  const [listAtBottom, setListAtBottom] = useState(false)
+  const listRef = useRef<HTMLDivElement>(null)
+
+  const checkScrollBottom = useCallback(() => {
+    const el = listRef.current
+    if (!el) return
+    const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 10
+    setListAtBottom(atBottom)
+  }, [])
+
+  useEffect(() => {
+    const el = listRef.current
+    if (!el) return
+    checkScrollBottom()
+    const obs = new ResizeObserver(checkScrollBottom)
+    obs.observe(el)
+    return () => obs.disconnect()
+  }, [checkScrollBottom, memos])
 
   const addMemo = () => {
     if (!content.trim()) return
@@ -71,39 +89,41 @@ export default function MemoTab({ memos, onSave }: MemoTabProps) {
           추가
         </button>
       </div>
-      <div className="memo-list">
-        {memos.length === 0 ? (
-          <EmptyBell message="메모를 추가해보세요" />
-        ) : (
-          memos.map((m, i) => (
-            <div key={m.id} className="memo-item slim">
-              {editingId === m.id ? (
-                <input
-                  type="text"
-                  className="memo-edit-input"
-                  value={editContent}
-                  onChange={(e) => setEditContent(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.nativeEvent.isComposing) saveEdit()
-                    if (e.key === 'Escape') setEditingId(null)
-                  }}
-                  onBlur={saveEdit}
-                  autoFocus
-                />
-              ) : (
-                <span className="memo-content-wrap" onClick={() => startEdit(m)}>
-                  <span className="memo-content-inline">{m.content}</span>
-                  <span className="memo-content-tooltip">{m.content}</span>
-                </span>
-              )}
-              <div className="memo-actions">
-                <button className="move-btn" onClick={() => moveMemo(m.id, -1)} disabled={i === 0}>▲</button>
-                <button className="move-btn" onClick={() => moveMemo(m.id, 1)} disabled={i === memos.length - 1}>▼</button>
-                <button className="delete-btn" onClick={() => removeMemo(m.id)}>×</button>
+      <div className={`scroll-fade-wrapper${listAtBottom ? ' at-bottom' : ''}`}>
+        <div className="memo-list" ref={listRef} onScroll={checkScrollBottom}>
+          {memos.length === 0 ? (
+            <EmptyBell message="메모를 추가해보세요" />
+          ) : (
+            memos.map((m, i) => (
+              <div key={m.id} className="memo-item slim">
+                {editingId === m.id ? (
+                  <input
+                    type="text"
+                    className="memo-edit-input"
+                    value={editContent}
+                    onChange={(e) => setEditContent(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.nativeEvent.isComposing) saveEdit()
+                      if (e.key === 'Escape') setEditingId(null)
+                    }}
+                    onBlur={saveEdit}
+                    autoFocus
+                  />
+                ) : (
+                  <span className="memo-content-wrap" onClick={() => startEdit(m)}>
+                    <span className="memo-content-inline">{m.content}</span>
+                    <span className="memo-content-tooltip">{m.content}</span>
+                  </span>
+                )}
+                <div className="memo-actions">
+                  <button className="move-btn" onClick={() => moveMemo(m.id, -1)} disabled={i === 0}>▲</button>
+                  <button className="move-btn" onClick={() => moveMemo(m.id, 1)} disabled={i === memos.length - 1}>▼</button>
+                  <button className="delete-btn" onClick={() => removeMemo(m.id)}>×</button>
+                </div>
               </div>
-            </div>
-          ))
-        )}
+            ))
+          )}
+        </div>
       </div>
     </div>
   )

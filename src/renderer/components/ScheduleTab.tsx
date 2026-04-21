@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import Calendar from './Calendar'
 import EmptyBell from './EmptyBell'
 import TimePicker from './TimePicker'
@@ -36,6 +36,24 @@ export default function ScheduleTab({ schedules, onSave, settings, onSettingsCha
   const [editDate, setEditDate] = useState('')
   const [editTime, setEditTime] = useState('')
   const [editContent, setEditContent] = useState('')
+  const [listAtBottom, setListAtBottom] = useState(false)
+  const listRef = useRef<HTMLDivElement>(null)
+
+  const checkScrollBottom = useCallback(() => {
+    const el = listRef.current
+    if (!el) return
+    const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 10
+    setListAtBottom(atBottom)
+  }, [])
+
+  useEffect(() => {
+    const el = listRef.current
+    if (!el) return
+    checkScrollBottom()
+    const obs = new ResizeObserver(checkScrollBottom)
+    obs.observe(el)
+    return () => obs.disconnect()
+  }, [checkScrollBottom, schedules])
 
   const addSchedule = () => {
     if (!date || !time || !content.trim()) return
@@ -170,32 +188,34 @@ export default function ScheduleTab({ schedules, onSave, settings, onSettingsCha
           </div>
         )}
 
-        <div className="schedule-list">
-          {filteredSchedules.length === 0 ? (
-            selectedDate ? (
-              <div className="empty">해당 날짜에 일정이 없습니다</div>
+        <div className={`scroll-fade-wrapper${listAtBottom ? ' at-bottom' : ''}`}>
+          <div className="schedule-list" ref={listRef} onScroll={checkScrollBottom}>
+            {filteredSchedules.length === 0 ? (
+              selectedDate ? (
+                <div className="empty">해당 날짜에 일정이 없습니다</div>
+              ) : (
+                <EmptyBell message="일정을 추가해보세요" />
+              )
             ) : (
-              <EmptyBell message="일정을 추가해보세요" />
-            )
-          ) : (
-            filteredSchedules.map((s) => (
-              <div
-                key={s.id}
-                className={`schedule-item ${isPast(s.datetime) ? 'past' : ''} ${s.notified ? 'notified' : ''}`}
-              >
-                <div className="schedule-info">
-                  <span className="schedule-date">{formatDisplayDate(s.date)}</span>
-                  <span className="schedule-time">{formatTime(s.time)}</span>
-                  <span className="schedule-content-wrap">
-                    <span className="schedule-content">{s.content}</span>
-                    <span className="schedule-content-tooltip">{s.content}</span>
-                  </span>
+              filteredSchedules.map((s) => (
+                <div
+                  key={s.id}
+                  className={`schedule-item ${isPast(s.datetime) ? 'past' : ''} ${s.notified ? 'notified' : ''}`}
+                >
+                  <div className="schedule-info">
+                    <span className="schedule-date">{formatDisplayDate(s.date)}</span>
+                    <span className="schedule-time">{formatTime(s.time)}</span>
+                    <span className="schedule-content-wrap">
+                      <span className="schedule-content">{s.content}</span>
+                      <span className="schedule-content-tooltip">{s.content}</span>
+                    </span>
+                  </div>
+                  <button className="edit-btn" onClick={() => startEdit(s)}>✎</button>
+                  <button className="delete-btn" onClick={() => removeSchedule(s.id)}>×</button>
                 </div>
-                <button className="edit-btn" onClick={() => startEdit(s)}>✎</button>
-                <button className="delete-btn" onClick={() => removeSchedule(s.id)}>×</button>
-              </div>
-            ))
-          )}
+              ))
+            )}
+          </div>
         </div>
 
       </div>
