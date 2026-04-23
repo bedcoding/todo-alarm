@@ -170,7 +170,7 @@ export default function App() {
           onClick={() => setActiveTab(activeTab === 'trash' ? 'schedule' : 'trash')}
           title="휴지통"
         >
-          🗑️{trash.length > 0 && <span className="trash-badge">{trash.length}</span>}
+          🗑️
         </button>
         {isPopup && (
           <>
