@@ -280,13 +280,7 @@ export default function ScheduleTab({ schedules, onSave, onDelete, settings, onS
                 className="time-input"
                 style={{ width: '100%' }}
               />
-              <input
-                type="time"
-                value={editTime}
-                onChange={(e) => setEditTime(e.target.value)}
-                className="time-input"
-                style={{ width: '100%' }}
-              />
+              <TimePicker value={editTime} onChange={setEditTime} />
               <input
                 type="text"
                 value={editContent}

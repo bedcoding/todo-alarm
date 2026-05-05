@@ -1,6 +1,6 @@
 {
   "name": "todo-alarm",
-  "version": "1.6.2",
+  "version": "1.7.0",
   "main": "./out/main/index.js",
   "scripts": {
     "dev": "electron-vite dev",
@@ -30,15 +30,20 @@
     "appId": "com.todoalarm.app",
     "productName": "Todo Alarm",
     "mac": {
-      "target": "dmg"
+      "target": "dmg",
+      "icon": "resources/icon.icns"
     },
     "win": {
-      "target": ["nsis", "portable"],
+      "target": [
+        "nsis",
+        "portable"
+      ],
       "icon": "resources/icon.ico"
     },
     "files": [
       "out/**/*",
       "resources/**/*"
     ]
-  }
+  },
+  "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
 }

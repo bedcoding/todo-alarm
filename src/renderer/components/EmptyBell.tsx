@@ -5,36 +5,17 @@ interface EmptyBellProps {
 export default function EmptyBell({ message }: EmptyBellProps) {
   return (
     <div className="empty-bell">
-      <svg viewBox="0 0 120 120" className="empty-bell-svg">
-        {/* 종 몸체: 뚱뚱하고 넓은 벨 */}
-        <path
-          d="M60 20 C40 20 28 34 28 48 C28 54 26 62 22 72 C20 76 18 80 18 82 L102 82 C102 80 100 76 98 72 C94 62 92 54 92 48 C92 34 80 20 60 20 Z"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="3.5"
-          strokeLinejoin="round"
-        />
-        {/* 종 꼭대기 선 (머리에 붙은 막대) */}
-        <line x1="60" y1="20" x2="60" y2="10" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" />
-        {/* 추 (딸랑이) */}
-        <path
-          d="M50 82 C50 90 54 96 60 96 C66 96 70 90 70 82"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="3.5"
-          strokeLinecap="round"
-        />
-        {/* 왼쪽 눈 (사각형) */}
-        <rect x="44" y="50" width="7" height="7" fill="currentColor" />
-        {/* 오른쪽 눈 (사각형) */}
-        <rect x="69" y="50" width="7" height="7" fill="currentColor" />
-        {/* 입 (시니컬) */}
-        <line
-          x1="50" y1="66" x2="70" y2="66"
-          stroke="currentColor"
-          strokeWidth="3"
-          strokeLinecap="round"
-        />
+      <svg viewBox="0 0 256 256" className="empty-bell-svg">
+        <g transform="translate(0,256) scale(0.1,-0.1)" fill="currentColor" stroke="none">
+          {/* 종 몸체 + 꼭대기 막대 + 딸랑이 */}
+          <path d="M1246 2314 c-12 -11 -16 -36 -16 -99 l0 -83 -64 -11 c-184 -32 -336 -131 -430 -280 -62 -97 -105 -259 -106 -396 -1 -153 -46 -275 -145 -399 -58 -72 -65 -94 -39 -120 13 -14 55 -16 303 -16 l288 0 12 -41 c25 -84 135 -159 231 -159 96 0 206 75 231 159 l12 41 288 0 c248 0 290 2 303 16 26 26 19 48 -39 120 -98 122 -144 248 -145 392 0 134 -37 280 -96 387 -38 66 -129 162 -198 207 -61 39 -176 80 -258 92 l-48 7 0 84 c0 88 -12 115 -50 115 -10 0 -26 -7 -34 -16z m167 -299 c189 -40 342 -189 392 -384 9 -34 20 -122 25 -195 13 -182 40 -271 121 -393 l21 -33 -692 0 -692 0 22 32 c76 115 120 261 120 399 0 399 304 655 683 574z m-8 -1135 c-18 -35 -81 -70 -126 -70 -42 0 -95 27 -119 60 -11 16 -20 31 -20 34 0 3 63 6 140 6 l141 0 -16 -30z" />
+          {/* 왼쪽 눈 */}
+          <path d="M1020 1570 l0 -70 70 0 70 0 0 70 0 70 -70 0 -70 0 0 -70z" />
+          {/* 오른쪽 눈 */}
+          <path d="M1340 1570 l0 -70 70 0 70 0 0 70 0 70 -70 0 -70 0 0 -70z" />
+          {/* 입 */}
+          <path d="M1097 1324 c-14 -14 -7 -43 12 -54 11 -5 80 -10 153 -10 142 0 174 9 166 46 -3 18 -14 19 -164 22 -88 1 -163 -1 -167 -4z" />
+        </g>
       </svg>
       <p className="empty-bell-message">{message}</p>
     </div>
