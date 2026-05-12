@@ -129,7 +129,6 @@ export default function App() {
       {!isPopup && <div className="titlebar-drag" />}
       <div
         className={`away-global-bar ${awayCheck.enabled ? '' : 'disabled'} ${awayWarning ? 'warning' : ''} ${awayOver ? 'over' : ''}`}
-        onClick={() => setActiveTab('awaycheck')}
       >
         {awayCheck.enabled && (
           <div className="away-global-progress" style={{ width: `${awayProgress * 100}%` }} />
@@ -141,7 +140,7 @@ export default function App() {
               ? '⚠️ 이석 시간 초과!'
               : `🔔 ${String(awayMinutes).padStart(2, '0')}:${String(awaySeconds).padStart(2, '0')} 남음`}
         </div>
-        <div className="header-actions" onClick={(e) => e.stopPropagation()}>
+        <div className="header-actions">
           <button
             className={`header-icon-btn ${activeTab === 'trash' ? 'active' : ''}`}
             onClick={() => setActiveTab(activeTab === 'trash' ? 'schedule' : 'trash')}
