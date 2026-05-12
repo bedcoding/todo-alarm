@@ -127,19 +127,48 @@ export default function App() {
   return (
     <div className={`app ${isPopup ? 'popup-mode' : 'main-mode'}`}>
       {!isPopup && <div className="titlebar-drag" />}
-      {awayCheck.enabled && (
-        <div
-          className={`away-global-bar ${awayWarning ? 'warning' : ''} ${awayOver ? 'over' : ''}`}
-          onClick={() => setActiveTab('awaycheck')}
-        >
+      <div
+        className={`away-global-bar ${awayCheck.enabled ? '' : 'disabled'} ${awayWarning ? 'warning' : ''} ${awayOver ? 'over' : ''}`}
+        onClick={() => setActiveTab('awaycheck')}
+      >
+        {awayCheck.enabled && (
           <div className="away-global-progress" style={{ width: `${awayProgress * 100}%` }} />
-          <div className="away-global-text">
-            {awayOver
+        )}
+        <div className="away-global-text">
+          {!awayCheck.enabled
+            ? '🔕 이석체크 OFF'
+            : awayOver
               ? '⚠️ 이석 시간 초과!'
               : `🔔 ${String(awayMinutes).padStart(2, '0')}:${String(awaySeconds).padStart(2, '0')} 남음`}
-          </div>
         </div>
-      )}
+        <div className="header-actions" onClick={(e) => e.stopPropagation()}>
+          <button
+            className={`header-icon-btn ${activeTab === 'trash' ? 'active' : ''}`}
+            onClick={() => setActiveTab(activeTab === 'trash' ? 'schedule' : 'trash')}
+            title="휴지통"
+          >
+            🗑️
+          </button>
+          {isPopup && (
+            <>
+              <button
+                className={`header-icon-btn pin-btn ${pinned ? 'pinned' : ''}`}
+                onClick={() => {
+                  const next = !pinned
+                  setPinned(next)
+                  window.api.setPinned(next)
+                }}
+                title={pinned ? '고정 해제' : '창 고정'}
+              >
+                📌
+              </button>
+              <button className="header-icon-btn expand-btn" onClick={handleOpenMain} title="큰 창으로 열기">
+                ⛶
+              </button>
+            </>
+          )}
+        </div>
+      </div>
       <div className="tabs">
         <button
           className={`tab ${activeTab === 'schedule' ? 'active' : ''}`}
@@ -165,31 +194,6 @@ export default function App() {
         >
           슬랙
         </button>
-        <button
-          className={`tab trash-btn ${activeTab === 'trash' ? 'active' : ''}`}
-          onClick={() => setActiveTab(activeTab === 'trash' ? 'schedule' : 'trash')}
-          title="휴지통"
-        >
-          🗑️
-        </button>
-        {isPopup && (
-          <>
-            <button
-              className={`tab pin-btn ${pinned ? 'pinned' : ''}`}
-              onClick={() => {
-                const next = !pinned
-                setPinned(next)
-                window.api.setPinned(next)
-              }}
-              title={pinned ? '고정 해제' : '창 고정'}
-            >
-              📌
-            </button>
-            <button className="tab expand-btn" onClick={handleOpenMain} title="큰 창으로 열기">
-              ⛶
-            </button>
-          </>
-        )}
       </div>
       <div className="content">
         <div className={`tab-panel ${activeTab === 'schedule' ? 'active' : ''}`}>
