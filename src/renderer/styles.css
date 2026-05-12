@@ -2015,6 +2015,10 @@ input:focus, textarea:focus {
   cursor: not-allowed;
 }
 
+.duty-modal-btn {
+  margin-top: 10px;
+}
+
 .duty-clear-all-btn {
   width: 100%;
   padding: 8px 12px;

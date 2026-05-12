@@ -346,29 +346,25 @@ export default function DutyTab({ duty, onSave }: DutyTabProps) {
                 className="time-input"
               />
             </div>
-            <div className="settings-row">
-              <button
-                className="test-notification-btn"
-                onClick={handleTest}
-                disabled={!slackConfigured || testStatus === 'loading'}
-                title={slackConfigured ? '오늘/내일 당직자로 슬랙에 즉시 발송' : '슬랙 탭에서 당직 알림용 webhook을 먼저 설정하세요'}
-              >
-                {testStatus === 'loading' && '전송 중...'}
-                {testStatus === 'success' && '전송 성공!'}
-                {testStatus === 'fail' && '전송 실패'}
-                {testStatus === 'idle' && '지금 테스트 발송'}
-              </button>
-            </div>
-            <div className="settings-row">
-              <button
-                className="duty-clear-all-btn"
-                onClick={() => setConfirmClearAll(true)}
-                disabled={duty.people.length === 0 && duty.assignments.length === 0}
-              >
-                당직자/배정 전체 삭제
-              </button>
-            </div>
-            <button className="picker-close-btn" onClick={() => setShowSettings(false)}>닫기</button>
+            <button
+              className="test-notification-btn duty-modal-btn"
+              onClick={handleTest}
+              disabled={!slackConfigured || testStatus === 'loading'}
+              title={slackConfigured ? '오늘/내일 당직자로 슬랙에 즉시 발송' : '슬랙 탭에서 당직 알림용 webhook을 먼저 설정하세요'}
+            >
+              {testStatus === 'loading' && '전송 중...'}
+              {testStatus === 'success' && '전송 성공!'}
+              {testStatus === 'fail' && '전송 실패'}
+              {testStatus === 'idle' && '지금 테스트 발송'}
+            </button>
+            <button
+              className="duty-clear-all-btn duty-modal-btn"
+              onClick={() => setConfirmClearAll(true)}
+              disabled={duty.people.length === 0 && duty.assignments.length === 0}
+            >
+              당직자/배정 전체 삭제
+            </button>
+            <button className="picker-close-btn duty-modal-btn" onClick={() => setShowSettings(false)}>닫기</button>
           </div>
         </>
       )}
