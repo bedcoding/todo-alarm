@@ -30,5 +30,11 @@ contextBridge.exposeInMainWorld('api', {
   saveTrash: (trash: unknown[]) => ipcRenderer.invoke('save-trash', trash),
   onTrashUpdated: (callback: (trash: unknown[]) => void) => {
     ipcRenderer.on('trash-updated', (_, trash) => callback(trash))
-  }
+  },
+  getDuty: () => ipcRenderer.invoke('get-duty'),
+  saveDuty: (duty: unknown) => ipcRenderer.invoke('save-duty', duty),
+  onDutyUpdated: (callback: (duty: unknown) => void) => {
+    ipcRenderer.on('duty-updated', (_, duty) => callback(duty))
+  },
+  testDutySlack: (config: unknown) => ipcRenderer.invoke('test-duty-slack', config)
 })

@@ -74,6 +74,42 @@ export interface TrashItem {
   deletedAt: string
 }
 
+export interface DutyPerson {
+  id: number
+  name: string
+  slackUserId: string
+  color: string
+}
+
+export interface DutyAssignment {
+  id: number
+  date: string
+  personIds: number[]
+}
+
+export interface DutySettings {
+  enabled: boolean
+  alertTime: string
+  people: DutyPerson[]
+  assignments: DutyAssignment[]
+  lastSentDate?: string
+  slackMethod: SlackMethod
+  slackWebhookUrl: string
+  slackBotToken: string
+  slackChannelId: string
+}
+
+export const DEFAULT_DUTY: DutySettings = {
+  enabled: false,
+  alertTime: '09:00',
+  people: [],
+  assignments: [],
+  slackMethod: 'webhook',
+  slackWebhookUrl: '',
+  slackBotToken: '',
+  slackChannelId: '',
+}
+
 export interface AppData {
   schedules: Schedule[]
   memos: Memo[]
@@ -81,6 +117,7 @@ export interface AppData {
   awayCheck: AwayCheckSettings
   morningAlertSentDate?: string
   trash: TrashItem[]
+  duty: DutySettings
 }
 
 export interface ElectronAPI {
@@ -104,6 +141,10 @@ export interface ElectronAPI {
   getTrash: () => Promise<TrashItem[]>
   saveTrash: (trash: TrashItem[]) => Promise<boolean>
   onTrashUpdated: (callback: (trash: TrashItem[]) => void) => void
+  getDuty: () => Promise<DutySettings>
+  saveDuty: (duty: DutySettings) => Promise<boolean>
+  onDutyUpdated: (callback: (duty: DutySettings) => void) => void
+  testDutySlack: (config: { method: SlackMethod; webhookUrl: string; botToken: string; channelId: string }) => Promise<{ success: boolean; error?: string }>
 }
 
 declare global {

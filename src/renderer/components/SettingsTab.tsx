@@ -1,15 +1,20 @@
 import { useState, useRef, useCallback } from 'react'
-import type { Settings } from '../../types'
+import type { Settings, DutySettings, SlackMethod } from '../../types'
 
 interface SettingsTabProps {
   settings: Settings
   onSave: (settings: Settings) => void
+  duty: DutySettings
+  onDutySave: (duty: DutySettings) => void
 }
 
-export default function SettingsTab({ settings, onSave }: SettingsTabProps) {
+export default function SettingsTab({ settings, onSave, duty, onDutySave }: SettingsTabProps) {
   const [slackTestStatus, setSlackTestStatus] = useState<'idle' | 'loading' | 'success' | 'fail'>('idle')
+  const [dutySlackTestStatus, setDutySlackTestStatus] = useState<'idle' | 'loading' | 'success' | 'fail'>('idle')
   const [textEdits, setTextEdits] = useState<Partial<Settings>>({})
+  const [dutyTextEdits, setDutyTextEdits] = useState<Partial<DutySettings>>({})
   const debounceRef = useRef<ReturnType<typeof setTimeout>>()
+  const dutyDebounceRef = useRef<ReturnType<typeof setTimeout>>()
 
   const update = (patch: Partial<Settings>) => {
     onSave({ ...settings, ...patch })
@@ -24,7 +29,21 @@ export default function SettingsTab({ settings, onSave }: SettingsTabProps) {
     }, 500)
   }, [settings, textEdits, onSave])
 
+  const updateDuty = (patch: Partial<DutySettings>) => {
+    onDutySave({ ...duty, ...patch })
+  }
+
+  const updateDutyText = useCallback((patch: Partial<DutySettings>) => {
+    setDutyTextEdits((prev) => ({ ...prev, ...patch }))
+    clearTimeout(dutyDebounceRef.current)
+    dutyDebounceRef.current = setTimeout(() => {
+      onDutySave({ ...duty, ...dutyTextEdits, ...patch })
+      setDutyTextEdits({})
+    }, 500)
+  }, [duty, dutyTextEdits, onDutySave])
+
   const mergedSettings = { ...settings, ...textEdits }
+  const mergedDuty = { ...duty, ...dutyTextEdits }
 
   const handleTestSlack = async () => {
     const { slackMethod, slackWebhookUrl, slackBotToken, slackChannelId } = settings
@@ -41,11 +60,26 @@ export default function SettingsTab({ settings, onSave }: SettingsTabProps) {
     setTimeout(() => setSlackTestStatus('idle'), 3000)
   }
 
+  const handleTestDutySlack = async () => {
+    const { slackMethod, slackWebhookUrl, slackBotToken, slackChannelId } = duty
+    if (slackMethod === 'webhook' && !slackWebhookUrl.trim()) return
+    if (slackMethod === 'bot' && (!slackBotToken.trim() || !slackChannelId.trim())) return
+    setDutySlackTestStatus('loading')
+    const result = await window.api.testDutySlack({
+      method: slackMethod,
+      webhookUrl: slackWebhookUrl,
+      botToken: slackBotToken,
+      channelId: slackChannelId
+    })
+    setDutySlackTestStatus(result.success ? 'success' : 'fail')
+    setTimeout(() => setDutySlackTestStatus('idle'), 3000)
+  }
+
   return (
     <div className="settings-tab">
       <div className="settings-section">
           <div className="settings-row">
-            <label>Slack 알림</label>
+            <label>Slack 알림 (일정/이석)</label>
             <div
               className={`toggle ${settings.slackEnabled ? 'on' : ''}`}
               onClick={() => update({ slackEnabled: !settings.slackEnabled })}
@@ -60,7 +94,7 @@ export default function SettingsTab({ settings, onSave }: SettingsTabProps) {
                 <label>연동 방식</label>
                 <select
                   value={settings.slackMethod}
-                  onChange={(e) => update({ slackMethod: e.target.value as 'webhook' | 'bot' })}
+                  onChange={(e) => update({ slackMethod: e.target.value as SlackMethod })}
                 >
                   <option value="webhook">Webhook URL</option>
                   <option value="bot">Bot Token</option>
@@ -121,6 +155,77 @@ export default function SettingsTab({ settings, onSave }: SettingsTabProps) {
               </div>
             </>
           )}
+        </div>
+
+        <div className="settings-section">
+          <div className="settings-row">
+            <label>Slack 알림 (당직)</label>
+            <div className="settings-hint">당직 탭 전용 채널 설정</div>
+          </div>
+
+          <div className="settings-row">
+            <label>연동 방식</label>
+            <select
+              value={duty.slackMethod}
+              onChange={(e) => updateDuty({ slackMethod: e.target.value as SlackMethod })}
+            >
+              <option value="webhook">Webhook URL</option>
+              <option value="bot">Bot Token</option>
+            </select>
+          </div>
+
+          {duty.slackMethod === 'webhook' ? (
+            <div className="settings-row vertical">
+              <label>Webhook URL</label>
+              <input
+                type="text"
+                placeholder="https://hooks.slack.com/services/T.../B.../xxx"
+                value={mergedDuty.slackWebhookUrl}
+                onChange={(e) => updateDutyText({ slackWebhookUrl: e.target.value })}
+                className="webhook-input"
+              />
+            </div>
+          ) : (
+            <>
+              <div className="settings-row vertical">
+                <label>Bot Token</label>
+                <input
+                  type="text"
+                  placeholder="xoxb-..."
+                  value={mergedDuty.slackBotToken}
+                  onChange={(e) => updateDutyText({ slackBotToken: e.target.value })}
+                  className="webhook-input"
+                />
+              </div>
+              <div className="settings-row vertical">
+                <label>채널 ID</label>
+                <input
+                  type="text"
+                  placeholder="C01XXXXXXXX"
+                  value={mergedDuty.slackChannelId}
+                  onChange={(e) => updateDutyText({ slackChannelId: e.target.value })}
+                  className="webhook-input"
+                />
+              </div>
+            </>
+          )}
+
+          <div className="settings-row">
+            <button
+              className="test-slack-btn"
+              onClick={handleTestDutySlack}
+              disabled={dutySlackTestStatus === 'loading' || (
+                duty.slackMethod === 'webhook'
+                  ? !duty.slackWebhookUrl.trim()
+                  : !duty.slackBotToken.trim() || !duty.slackChannelId.trim()
+              )}
+            >
+              {dutySlackTestStatus === 'loading' && '전송 중...'}
+              {dutySlackTestStatus === 'success' && '전송 성공!'}
+              {dutySlackTestStatus === 'fail' && '전송 실패'}
+              {dutySlackTestStatus === 'idle' && '당직 Slack 테스트'}
+            </button>
+          </div>
         </div>
         <div className="version-info">v{__APP_VERSION__} ({__BUILD_DATE__})</div>
     </div>

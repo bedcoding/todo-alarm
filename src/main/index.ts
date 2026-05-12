@@ -1,8 +1,8 @@
 import { app, BrowserWindow, ipcMain, Menu, Notification, Tray, nativeImage, screen, net, powerMonitor } from 'electron'
 import path from 'path'
 import fs from 'fs'
-import type { AppData, Schedule, Memo, Settings, AwayCheckSettings, TrashItem } from '../types'
-import { DEFAULT_SETTINGS, DEFAULT_AWAY_CHECK } from '../types'
+import type { AppData, Schedule, Memo, Settings, AwayCheckSettings, TrashItem, DutySettings, SlackMethod } from '../types'
+import { DEFAULT_SETTINGS, DEFAULT_AWAY_CHECK, DEFAULT_DUTY } from '../types'
 
 let dataPath: string
 
@@ -15,10 +15,18 @@ function readData(): AppData {
       settings: { ...DEFAULT_SETTINGS, ...raw.settings },
       awayCheck: { ...DEFAULT_AWAY_CHECK, ...raw.awayCheck },
       morningAlertSentDate: raw.morningAlertSentDate,
-      trash: raw.trash ?? []
+      trash: raw.trash ?? [],
+      duty: { ...DEFAULT_DUTY, ...raw.duty }
     }
   } catch {
-    return { schedules: [], memos: [], settings: { ...DEFAULT_SETTINGS }, awayCheck: { ...DEFAULT_AWAY_CHECK }, trash: [] }
+    return {
+      schedules: [],
+      memos: [],
+      settings: { ...DEFAULT_SETTINGS },
+      awayCheck: { ...DEFAULT_AWAY_CHECK },
+      trash: [],
+      duty: { ...DEFAULT_DUTY }
+    }
   }
 }
 
@@ -32,6 +40,7 @@ let mainWindow: BrowserWindow | null = null
 let alarmIntervalId: ReturnType<typeof setInterval> | null = null
 let scheduledTimers: ReturnType<typeof setTimeout>[] = []
 let morningAlertTimer: ReturnType<typeof setTimeout> | null = null
+let dutyAlertTimer: ReturnType<typeof setTimeout> | null = null
 let awayCheckIntervalId: ReturnType<typeof setInterval> | null = null
 let trashTimers: ReturnType<typeof setTimeout>[] = []
 let awayAlertSent = false
@@ -144,6 +153,7 @@ function togglePopup(): void {
   // 팝업 열 때 놓친 알림 catch-up
   scheduleExactTimers()
   scheduleMorningAlert()
+  scheduleDutyAlert()
 
   const trayBounds = tray!.getBounds()
   const windowBounds = popupWindow!.getBounds()
@@ -349,6 +359,126 @@ function scheduleMorningAlert(): void {
   }
 }
 
+function todayDateStr(d = new Date()): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+function formatDutyMention(person: { name: string; slackUserId: string } | undefined): string {
+  if (!person) return ''
+  const id = person.slackUserId.trim()
+  if (id) return `<@${id}>`
+  return person.name
+}
+
+function buildDutyMessage(duty: DutySettings, baseDate = new Date()): string | null {
+  const todayStr = todayDateStr(baseDate)
+  const tomorrow = new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate() + 1)
+  const tomorrowStr = todayDateStr(tomorrow)
+
+  const peopleOnDate = (dateStr: string): string => {
+    const a = duty.assignments.find((x) => x.date === dateStr)
+    if (!a || a.personIds.length === 0) return ''
+    return a.personIds
+      .map((pid) => duty.people.find((p) => p.id === pid))
+      .filter((p): p is typeof duty.people[number] => !!p)
+      .map((p) => formatDutyMention(p))
+      .join(', ')
+  }
+
+  const todayLine = peopleOnDate(todayStr)
+  const tomorrowLine = peopleOnDate(tomorrowStr)
+
+  if (!todayLine && !tomorrowLine) return null
+
+  const lines: string[] = ['🔔 *당직 알림*']
+  if (todayLine) lines.push(`오늘 당직: ${todayLine}`)
+  if (tomorrowLine) lines.push(`내일 당직: ${tomorrowLine}`)
+  return lines.join('\n')
+}
+
+async function sendSlackByConfig(
+  method: SlackMethod,
+  webhookUrl: string,
+  botToken: string,
+  channelId: string,
+  message: string
+): Promise<boolean> {
+  if (method === 'bot') {
+    return sendSlackBot(botToken, channelId, message)
+  }
+  return sendSlackWebhook(webhookUrl, message)
+}
+
+function saveDutyLastSentDate(dateStr: string): void {
+  const data = readData()
+  data.duty.lastSentDate = dateStr
+  writeData(data)
+  sendToAllWindows('duty-updated', data.duty)
+}
+
+function dispatchDutyAlert(): void {
+  const data = readData()
+  const { duty } = data
+  if (!duty.enabled) return
+
+  const todayStr = todayDateStr()
+  if (duty.lastSentDate === todayStr) return
+
+  const message = buildDutyMessage(duty)
+  if (!message) {
+    saveDutyLastSentDate(todayStr)
+    return
+  }
+
+  // mac 알림
+  if (data.settings.macNotification) {
+    const body = message.replace(/^🔔 \*당직 알림\*\n?/, '')
+    new Notification({ title: '🔔 당직 알림', body, sound: 'default' }).show()
+  }
+
+  // 슬랙 (당직용 별도 설정)
+  sendSlackByConfig(
+    duty.slackMethod,
+    duty.slackWebhookUrl,
+    duty.slackBotToken,
+    duty.slackChannelId,
+    message
+  )
+
+  saveDutyLastSentDate(todayStr)
+}
+
+function scheduleDutyAlert(): void {
+  if (dutyAlertTimer) {
+    clearTimeout(dutyAlertTimer)
+    dutyAlertTimer = null
+  }
+
+  const data = readData()
+  const { duty } = data
+  if (!duty.enabled) return
+
+  const now = new Date()
+  const todayStr = todayDateStr(now)
+  if (duty.lastSentDate === todayStr) return
+
+  const [h, m] = duty.alertTime.split(':').map(Number)
+  const target = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m)
+  const diff = target.getTime() - now.getTime()
+
+  if (diff < -120000) {
+    // 2분 이상 지남 → 즉시 발송 (놓친 알림)
+    dispatchDutyAlert()
+  } else if (diff <= 0) {
+    // 알림 시각 ~ +2분 → 즉시
+    dispatchDutyAlert()
+  } else {
+    dutyAlertTimer = setTimeout(() => {
+      dispatchDutyAlert()
+    }, diff)
+  }
+}
+
 function cleanupTrash(): void {
   trashTimers.forEach((t) => clearTimeout(t))
   trashTimers = []
@@ -410,12 +540,14 @@ function startAlarmChecker(): void {
   // 정확한 시간에 알림 예약
   scheduleExactTimers()
   scheduleMorningAlert()
+  scheduleDutyAlert()
 
   // 주기적 체크 (새로 추가된 일정 반영)
   alarmIntervalId = setInterval(() => {
     // 새로 추가된 일정 반영을 위해 타이머 재설정
     scheduleExactTimers()
     scheduleMorningAlert()
+    scheduleDutyAlert()
     cleanupTrash()
   }, interval)
 }
@@ -530,6 +662,7 @@ app.whenReady().then(() => {
   powerMonitor.on('unlock-screen', () => {
     scheduleExactTimers()
     scheduleMorningAlert()
+    scheduleDutyAlert()
   })
 })
 
@@ -651,6 +784,31 @@ ipcMain.handle('test-away-notification', () => {
 ipcMain.handle('test-slack', async (_, config: { method: string; webhookUrl: string; botToken: string; channelId: string }) => {
   try {
     const message = '🔔 *Todo Alarm 테스트*\nSlack 알림이 정상적으로 연결되었습니다!'
+    const success = config.method === 'bot'
+      ? await sendSlackBot(config.botToken, config.channelId, message)
+      : await sendSlackWebhook(config.webhookUrl, message)
+    return { success }
+  } catch {
+    return { success: false, error: '전송 실패' }
+  }
+})
+
+ipcMain.handle('get-duty', () => readData().duty)
+ipcMain.handle('save-duty', (_, duty: DutySettings) => {
+  const data = readData()
+  // 날짜가 바뀐 사람/할당이 들어왔을 수 있으니 lastSentDate는 클라이언트 값 무시하고 보존
+  const preserved: DutySettings = { ...duty, lastSentDate: data.duty.lastSentDate }
+  data.duty = preserved
+  writeData(data)
+  sendToAllWindows('duty-updated', preserved)
+  scheduleDutyAlert()
+  return true
+})
+
+ipcMain.handle('test-duty-slack', async (_, config: { method: string; webhookUrl: string; botToken: string; channelId: string }) => {
+  try {
+    const data = readData()
+    const message = buildDutyMessage(data.duty) ?? '🔔 *당직 알림 테스트*\n오늘/내일 등록된 당직자가 없습니다.'
     const success = config.method === 'bot'
       ? await sendSlackBot(config.botToken, config.channelId, message)
       : await sendSlackWebhook(config.webhookUrl, message)

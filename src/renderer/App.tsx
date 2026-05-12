@@ -4,12 +4,13 @@ import MemoTab from './components/MemoTab'
 import AwayCheckTab from './components/AwayCheckTab'
 import SettingsTab from './components/SettingsTab'
 import TrashTab from './components/TrashTab'
-import type { Schedule, Memo, Settings, AwayCheckSettings, TrashItem } from '../types'
-import { DEFAULT_SETTINGS, DEFAULT_AWAY_CHECK } from '../types'
+import DutyTab from './components/DutyTab'
+import type { Schedule, Memo, Settings, AwayCheckSettings, TrashItem, DutySettings } from '../types'
+import { DEFAULT_SETTINGS, DEFAULT_AWAY_CHECK, DEFAULT_DUTY } from '../types'
 
 const isPopup = window.location.hash === '#popup'
 
-type TabType = 'schedule' | 'memo' | 'awaycheck' | 'settings' | 'trash'
+type TabType = 'schedule' | 'memo' | 'awaycheck' | 'duty' | 'settings' | 'trash'
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<TabType>('schedule')
@@ -17,6 +18,7 @@ export default function App() {
   const [memos, setMemos] = useState<Memo[]>([])
   const [settings, setSettings] = useState<Settings>({ ...DEFAULT_SETTINGS })
   const [awayCheck, setAwayCheck] = useState<AwayCheckSettings>({ ...DEFAULT_AWAY_CHECK })
+  const [duty, setDuty] = useState<DutySettings>({ ...DEFAULT_DUTY })
   const [trash, setTrash] = useState<TrashItem[]>([])
   const [idleSeconds, setIdleSeconds] = useState(0)
   const [pinned, setPinned] = useState(false)
@@ -28,11 +30,13 @@ export default function App() {
     window.api.getMemos().then(setMemos)
     window.api.getSettings().then(setSettings)
     window.api.getAwayCheck().then(setAwayCheck)
+    window.api.getDuty().then(setDuty)
     window.api.getTrash().then(setTrash)
 
     window.api.onSchedulesUpdated((updated) => setSchedules(updated))
     window.api.onMemosUpdated((updated) => setMemos(updated))
     window.api.onAwayCheckUpdated((updated) => setAwayCheck(updated))
+    window.api.onDutyUpdated((updated) => setDuty(updated))
     window.api.onIdleStatus((data) => setIdleSeconds(data.idleSeconds))
     window.api.onTrashUpdated((updated) => setTrash(updated))
   }, [])
@@ -55,6 +59,11 @@ export default function App() {
   const saveAwayCheck = async (newAwayCheck: AwayCheckSettings) => {
     setAwayCheck(newAwayCheck)
     await window.api.saveAwayCheck(newAwayCheck)
+  }
+
+  const saveDuty = async (newDuty: DutySettings) => {
+    setDuty(newDuty)
+    await window.api.saveDuty(newDuty)
   }
 
   const saveTrash = async (newTrash: TrashItem[]) => {
@@ -188,6 +197,12 @@ export default function App() {
           이석
         </button>
         <button
+          className={`tab ${activeTab === 'duty' ? 'active' : ''}`}
+          onClick={() => setActiveTab('duty')}
+        >
+          당직
+        </button>
+        <button
           className={`tab ${activeTab === 'settings' ? 'active' : ''}`}
           onClick={() => setActiveTab('settings')}
         >
@@ -204,8 +219,11 @@ export default function App() {
         <div className={`tab-panel ${activeTab === 'awaycheck' ? 'active' : ''}`}>
           <AwayCheckTab awayCheck={awayCheck} onSave={saveAwayCheck} />
         </div>
+        <div className={`tab-panel ${activeTab === 'duty' ? 'active' : ''}`}>
+          <DutyTab duty={duty} onSave={saveDuty} />
+        </div>
         <div className={`tab-panel ${activeTab === 'settings' ? 'active' : ''}`}>
-          <SettingsTab settings={settings} onSave={saveSettings} />
+          <SettingsTab settings={settings} onSave={saveSettings} duty={duty} onDutySave={saveDuty} />
         </div>
         <div className={`tab-panel ${activeTab === 'trash' ? 'active' : ''}`}>
           <TrashTab trash={trash} onRestore={restoreFromTrash} onPermanentDelete={permanentDelete} onEmptyAll={emptyTrash} />
