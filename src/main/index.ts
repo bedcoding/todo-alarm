@@ -370,6 +370,12 @@ function formatDutyMention(person: { name: string; slackUserId: string } | undef
   return person.name
 }
 
+const DUTY_WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토']
+
+function formatDutyDateLabel(d: Date): string {
+  return `${d.getMonth() + 1}/${d.getDate()} ${DUTY_WEEKDAYS[d.getDay()]}`
+}
+
 function buildDutyMessage(duty: DutySettings, baseDate = new Date()): string | null {
   const todayStr = todayDateStr(baseDate)
   const tomorrow = new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate() + 1)
@@ -391,8 +397,8 @@ function buildDutyMessage(duty: DutySettings, baseDate = new Date()): string | n
   if (!todayLine && !tomorrowLine) return null
 
   const lines: string[] = ['🔔 *당직 알림*']
-  if (todayLine) lines.push(`오늘 당직: ${todayLine}`)
-  if (tomorrowLine) lines.push(`내일 당직: ${tomorrowLine}`)
+  if (todayLine) lines.push(`(${formatDutyDateLabel(baseDate)}) 오늘 당직: ${todayLine}`)
+  if (tomorrowLine) lines.push(`(${formatDutyDateLabel(tomorrow)}) 내일 당직: ${tomorrowLine}`)
   return lines.join('\n')
 }
 
