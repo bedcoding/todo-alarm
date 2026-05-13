@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, Menu, Notification, Tray, nativeImage, screen, net, powerMonitor } from 'electron'
+import { app, BrowserWindow, ipcMain, Menu, Notification, Tray, nativeImage, screen, net, powerMonitor, dialog } from 'electron'
 import path from 'path'
 import fs from 'fs'
 import type { AppData, Schedule, Memo, Settings, AwayCheckSettings, TrashItem, DutySettings, SlackMethod } from '../types'
@@ -815,5 +815,98 @@ ipcMain.handle('test-duty-slack', async (_, config: { method: string; webhookUrl
     return { success }
   } catch {
     return { success: false, error: '전송 실패' }
+  }
+})
+
+ipcMain.handle('pick-duty-file', async (_, kind: 'people' | 'assignments') => {
+  const title = kind === 'people' ? '사람 파일 선택 (people.json)' : '월별 배정 파일 선택 (YYYY-MM.json)'
+  const result = await dialog.showOpenDialog({
+    title,
+    properties: ['openFile'],
+    filters: [{ name: 'JSON', extensions: ['json'] }]
+  })
+  if (result.canceled || result.filePaths.length === 0) {
+    return { canceled: true }
+  }
+  return { canceled: false, path: result.filePaths[0] }
+})
+
+interface RosterPerson {
+  id: string
+  name: string
+  team?: string
+  slackUserId?: string
+  color?: string
+}
+interface RosterAssignmentEntry {
+  date: string
+  personIds: string[]
+}
+interface RosterMonthly {
+  month?: string
+  entries?: RosterAssignmentEntry[]
+}
+
+function randomDutyColor(): string {
+  const hue = Math.floor(Math.random() * 360)
+  const saturation = 40 + Math.floor(Math.random() * 51)
+  const lightness = 50 + Math.floor(Math.random() * 29)
+  return `hsl(${hue}, ${saturation}%, ${lightness}%)`
+}
+
+ipcMain.handle('apply-duty-files', async (_, paths: { peopleFilePath: string; assignmentsFilePath: string }) => {
+  try {
+    if (!paths.peopleFilePath || !paths.assignmentsFilePath) {
+      return { success: false, error: '두 파일 경로를 모두 입력하세요.' }
+    }
+    const [peopleRaw, assignmentsRaw] = await Promise.all([
+      fs.promises.readFile(paths.peopleFilePath, 'utf-8'),
+      fs.promises.readFile(paths.assignmentsFilePath, 'utf-8')
+    ])
+    const rosterPeople = JSON.parse(peopleRaw) as RosterPerson[]
+    const rosterMonth = JSON.parse(assignmentsRaw) as RosterMonthly
+    if (!Array.isArray(rosterPeople)) {
+      return { success: false, error: 'people 파일이 배열 형식이 아닙니다.' }
+    }
+    if (!rosterMonth.entries || !Array.isArray(rosterMonth.entries)) {
+      return { success: false, error: 'assignments 파일에 entries 배열이 없습니다.' }
+    }
+
+    const data = readData()
+    const existingById = new Map(data.duty.people.map((p) => [p.id, p]))
+
+    const people = rosterPeople.map((rp) => {
+      const existing = existingById.get(rp.id)
+      return {
+        id: rp.id,
+        name: rp.name,
+        slackUserId: rp.slackUserId ?? existing?.slackUserId ?? '',
+        color: existing?.color ?? rp.color ?? randomDutyColor()
+      }
+    })
+
+    const validIds = new Set(people.map((p) => p.id))
+    const assignments = rosterMonth.entries
+      .filter((e) => Array.isArray(e.personIds) && e.personIds.length > 0)
+      .map((e, idx) => ({
+        id: `a_${e.date}_${idx}`,
+        date: e.date,
+        personIds: e.personIds.filter((pid) => validIds.has(pid))
+      }))
+      .filter((e) => e.personIds.length > 0)
+
+    data.duty = {
+      ...data.duty,
+      people,
+      assignments,
+      peopleFilePath: paths.peopleFilePath,
+      assignmentsFilePath: paths.assignmentsFilePath
+    }
+    writeData(data)
+    sendToAllWindows('duty-updated', data.duty)
+    scheduleDutyAlert()
+    return { success: true, peopleCount: people.length, assignmentsCount: assignments.length }
+  } catch (e) {
+    return { success: false, error: e instanceof Error ? e.message : '파일 읽기 실패' }
   }
 })

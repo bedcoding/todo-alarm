@@ -28,12 +28,15 @@ function todayStr(): string {
 export default function DutyTab({ duty, onSave }: DutyTabProps) {
   const [newName, setNewName] = useState('')
   const [newSlackId, setNewSlackId] = useState('')
-  const [draggingPersonId, setDraggingPersonId] = useState<number | null>(null)
+  const [draggingPersonId, setDraggingPersonId] = useState<string | null>(null)
   const [dragOverDate, setDragOverDate] = useState<string | null>(null)
   const [testStatus, setTestStatus] = useState<'idle' | 'loading' | 'success' | 'fail'>('idle')
   const [showSettings, setShowSettings] = useState(false)
   const [personToDelete, setPersonToDelete] = useState<DutyPerson | null>(null)
   const [confirmClearAll, setConfirmClearAll] = useState(false)
+  const [peoplePath, setPeoplePath] = useState(duty.peopleFilePath)
+  const [assignmentsPath, setAssignmentsPath] = useState(duty.assignmentsFilePath)
+  const [applyStatus, setApplyStatus] = useState<{ kind: 'idle' | 'loading' | 'success' | 'fail'; msg?: string }>({ kind: 'idle' })
   const today = new Date()
   const [viewYear, setViewYear] = useState(today.getFullYear())
   const [viewMonth, setViewMonth] = useState(today.getMonth())
@@ -41,6 +44,35 @@ export default function DutyTab({ duty, onSave }: DutyTabProps) {
   const slackConfigured = duty.slackMethod === 'webhook'
     ? duty.slackWebhookUrl.trim().length > 0
     : duty.slackBotToken.trim().length > 0 && duty.slackChannelId.trim().length > 0
+
+  const pickFile = async (kind: 'people' | 'assignments') => {
+    const result = await window.api.pickFile(kind)
+    if (result.canceled || !result.path) return
+    if (kind === 'people') setPeoplePath(result.path)
+    else setAssignmentsPath(result.path)
+  }
+
+  const handleApply = async () => {
+    if (!peoplePath.trim() || !assignmentsPath.trim()) {
+      setApplyStatus({ kind: 'fail', msg: '두 파일 경로를 모두 입력하세요' })
+      setTimeout(() => setApplyStatus({ kind: 'idle' }), 3000)
+      return
+    }
+    setApplyStatus({ kind: 'loading' })
+    const result = await window.api.applyDutyFiles({
+      peopleFilePath: peoplePath.trim(),
+      assignmentsFilePath: assignmentsPath.trim()
+    })
+    if (result.success) {
+      setApplyStatus({
+        kind: 'success',
+        msg: `사람 ${result.peopleCount}명 · 배정 ${result.assignmentsCount}일 반영됨`
+      })
+    } else {
+      setApplyStatus({ kind: 'fail', msg: result.error ?? '실패' })
+    }
+    setTimeout(() => setApplyStatus({ kind: 'idle' }), 4000)
+  }
 
   const handleTest = async () => {
     if (!slackConfigured) return
@@ -59,7 +91,7 @@ export default function DutyTab({ duty, onSave }: DutyTabProps) {
     const name = newName.trim()
     if (!name) return
     const newPerson: DutyPerson = {
-      id: Date.now(),
+      id: `p_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
       name,
       slackUserId: newSlackId.trim(),
       color: randomColor()
@@ -69,7 +101,7 @@ export default function DutyTab({ duty, onSave }: DutyTabProps) {
     setNewSlackId('')
   }
 
-  const recolorPerson = (personId: number) => {
+  const recolorPerson = (personId: string) => {
     onSave({
       ...duty,
       people: duty.people.map((p) =>
@@ -78,7 +110,7 @@ export default function DutyTab({ duty, onSave }: DutyTabProps) {
     })
   }
 
-  const removePerson = (personId: number) => {
+  const removePerson = (personId: string) => {
     onSave({
       ...duty,
       people: duty.people.filter((p) => p.id !== personId),
@@ -92,7 +124,7 @@ export default function DutyTab({ duty, onSave }: DutyTabProps) {
     onSave({ ...duty, people: [], assignments: [] })
   }
 
-  const toggleAssignment = (dateString: string, personId: number) => {
+  const toggleAssignment = (dateString: string, personId: string) => {
     const existing = duty.assignments.find((a) => a.date === dateString)
     let newAssignments
     if (existing) {
@@ -109,17 +141,17 @@ export default function DutyTab({ duty, onSave }: DutyTabProps) {
     } else {
       newAssignments = [
         ...duty.assignments,
-        { id: Date.now(), date: dateString, personIds: [personId] }
+        { id: `a_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`, date: dateString, personIds: [personId] }
       ]
     }
     onSave({ ...duty, assignments: newAssignments })
   }
 
-  const handleDragStart = (e: React.DragEvent, personId: number) => {
+  const handleDragStart = (e: React.DragEvent, personId: string) => {
     setDraggingPersonId(personId)
     e.dataTransfer.effectAllowed = 'copy'
     // Firefox는 setData 필요
-    e.dataTransfer.setData('text/plain', String(personId))
+    e.dataTransfer.setData('text/plain', personId)
   }
 
   const handleDragEnd = () => {
@@ -141,10 +173,10 @@ export default function DutyTab({ duty, onSave }: DutyTabProps) {
   const handleCellDrop = (e: React.DragEvent, dateString: string) => {
     e.preventDefault()
     const personIdStr = e.dataTransfer.getData('text/plain')
-    const personId = personIdStr ? Number(personIdStr) : draggingPersonId
+    const personId = personIdStr || draggingPersonId
     setDraggingPersonId(null)
     setDragOverDate(null)
-    if (personId == null || Number.isNaN(personId)) return
+    if (!personId) return
     toggleAssignment(dateString, personId)
   }
 
@@ -357,6 +389,40 @@ export default function DutyTab({ duty, onSave }: DutyTabProps) {
               {testStatus === 'fail' && '전송 실패'}
               {testStatus === 'idle' && '지금 테스트 발송'}
             </button>
+
+            <div className="duty-file-sync">
+              <div className="duty-file-sync-title">파일에서 가져오기</div>
+              <div className="duty-file-row">
+                <label>사람 파일</label>
+                <input
+                  type="text"
+                  placeholder="/.../people.json"
+                  value={peoplePath}
+                  onChange={(e) => setPeoplePath(e.target.value)}
+                />
+                <button onClick={() => pickFile('people')} className="duty-file-pick">찾기</button>
+              </div>
+              <div className="duty-file-row">
+                <label>월별 배정</label>
+                <input
+                  type="text"
+                  placeholder="/.../assignments/2026-05.json"
+                  value={assignmentsPath}
+                  onChange={(e) => setAssignmentsPath(e.target.value)}
+                />
+                <button onClick={() => pickFile('assignments')} className="duty-file-pick">찾기</button>
+              </div>
+              <button
+                className="duty-modal-btn duty-apply-btn"
+                onClick={handleApply}
+                disabled={applyStatus.kind === 'loading' || !peoplePath.trim() || !assignmentsPath.trim()}
+              >
+                {applyStatus.kind === 'loading' ? '적용 중...' : '적용하기'}
+              </button>
+              {applyStatus.msg && (
+                <div className={`duty-apply-status ${applyStatus.kind}`}>{applyStatus.msg}</div>
+              )}
+            </div>
             <button
               className="duty-clear-all-btn duty-modal-btn"
               onClick={() => setConfirmClearAll(true)}

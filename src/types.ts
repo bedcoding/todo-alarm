@@ -75,16 +75,16 @@ export interface TrashItem {
 }
 
 export interface DutyPerson {
-  id: number
+  id: string
   name: string
   slackUserId: string
   color: string
 }
 
 export interface DutyAssignment {
-  id: number
+  id: string
   date: string
-  personIds: number[]
+  personIds: string[]
 }
 
 export interface DutySettings {
@@ -97,6 +97,8 @@ export interface DutySettings {
   slackWebhookUrl: string
   slackBotToken: string
   slackChannelId: string
+  peopleFilePath: string
+  assignmentsFilePath: string
 }
 
 export const DEFAULT_DUTY: DutySettings = {
@@ -108,6 +110,8 @@ export const DEFAULT_DUTY: DutySettings = {
   slackWebhookUrl: '',
   slackBotToken: '',
   slackChannelId: '',
+  peopleFilePath: '',
+  assignmentsFilePath: '',
 }
 
 export interface AppData {
@@ -145,6 +149,8 @@ export interface ElectronAPI {
   saveDuty: (duty: DutySettings) => Promise<boolean>
   onDutyUpdated: (callback: (duty: DutySettings) => void) => void
   testDutySlack: (config: { method: SlackMethod; webhookUrl: string; botToken: string; channelId: string }) => Promise<{ success: boolean; error?: string }>
+  pickFile: (kind: 'people' | 'assignments') => Promise<{ canceled: boolean; path?: string }>
+  applyDutyFiles: (paths: { peopleFilePath: string; assignmentsFilePath: string }) => Promise<{ success: boolean; error?: string; peopleCount?: number; assignmentsCount?: number }>
 }
 
 declare global {
