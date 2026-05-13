@@ -35,6 +35,8 @@ export default function DutyTab({ duty, onSave }: DutyTabProps) {
   const [personToDelete, setPersonToDelete] = useState<DutyPerson | null>(null)
   const [confirmClearAll, setConfirmClearAll] = useState(false)
   const [applyStatus, setApplyStatus] = useState<{ kind: 'idle' | 'loading' | 'success' | 'fail'; msg?: string }>({ kind: 'idle' })
+  const peoplePoolCollapsed = duty.peoplePoolCollapsed
+  const togglePeoplePool = () => onSave({ ...duty, peoplePoolCollapsed: !duty.peoplePoolCollapsed })
   const peoplePath = duty.peopleFilePath
   const assignmentsPath = duty.assignmentsFilePath
   const setPeoplePath = (v: string) => onSave({ ...duty, peopleFilePath: v })
@@ -213,65 +215,78 @@ export default function DutyTab({ duty, onSave }: DutyTabProps) {
 
   return (
     <div className="duty-tab">
-      <div className="duty-add-person">
-        <input
-          type="text"
-          placeholder="이름"
-          value={newName}
-          onChange={(e) => setNewName(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && addPerson()}
-        />
-        <input
-          type="text"
-          placeholder="슬랙 ID (선택)"
-          value={newSlackId}
-          onChange={(e) => setNewSlackId(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && addPerson()}
-        />
-        <button onClick={addPerson} disabled={!newName.trim()}>추가</button>
-      </div>
+      <button
+        className="duty-section-header"
+        onClick={togglePeoplePool}
+        type="button"
+      >
+        <span className="duty-section-arrow">{peoplePoolCollapsed ? '▶' : '▼'}</span>
+        <span>당직자 ({duty.people.length})</span>
+      </button>
 
-      <div className="duty-people-pool">
-        {duty.people.length === 0 ? (
-          <div className="duty-guide">
-            위에서 당직자를 추가한 뒤 달력으로 드래그하세요
+      {!peoplePoolCollapsed && (
+        <>
+          <div className="duty-add-person">
+            <input
+              type="text"
+              placeholder="이름"
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && addPerson()}
+            />
+            <input
+              type="text"
+              placeholder="슬랙 ID (선택)"
+              value={newSlackId}
+              onChange={(e) => setNewSlackId(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && addPerson()}
+            />
+            <button onClick={addPerson} disabled={!newName.trim()}>추가</button>
           </div>
-        ) : (
-          duty.people.map((p) => (
-            <div
-              key={p.id}
-              className={`duty-chip ${draggingPersonId === p.id ? 'dragging' : ''}`}
-              draggable
-              onDragStart={(e) => handleDragStart(e, p.id)}
-              onDragEnd={handleDragEnd}
-              title={p.slackUserId ? `슬랙 ID: ${p.slackUserId} — 드래그해서 달력에 배정` : '슬랙 ID 미설정 — 드래그해서 달력에 배정'}
-              style={{ '--person-color': p.color } as React.CSSProperties}
-            >
-              <span
-                className="duty-chip-dot"
-                title="클릭하여 색상 변경"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  recolorPerson(p.id)
-                }}
-              />
-              <span className="duty-chip-name">{p.name}</span>
-              {p.slackUserId && <span className="duty-chip-id">@</span>}
-              <span
-                className="duty-chip-remove"
-                draggable={false}
-                onDragStart={(e) => e.stopPropagation()}
-                onClick={(e) => {
-                  e.stopPropagation()
-                  setPersonToDelete(p)
-                }}
-              >
-                ×
-              </span>
-            </div>
-          ))
-        )}
-      </div>
+
+          <div className="duty-people-pool">
+            {duty.people.length === 0 ? (
+              <div className="duty-guide">
+                위에서 당직자를 추가한 뒤 달력으로 드래그하세요
+              </div>
+            ) : (
+              duty.people.map((p) => (
+                <div
+                  key={p.id}
+                  className={`duty-chip ${draggingPersonId === p.id ? 'dragging' : ''}`}
+                  draggable
+                  onDragStart={(e) => handleDragStart(e, p.id)}
+                  onDragEnd={handleDragEnd}
+                  title={p.slackUserId ? `슬랙 ID: ${p.slackUserId} — 드래그해서 달력에 배정` : '슬랙 ID 미설정 — 드래그해서 달력에 배정'}
+                  style={{ '--person-color': p.color } as React.CSSProperties}
+                >
+                  <span
+                    className="duty-chip-dot"
+                    title="클릭하여 색상 변경"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      recolorPerson(p.id)
+                    }}
+                  />
+                  <span className="duty-chip-name">{p.name}</span>
+                  {p.slackUserId && <span className="duty-chip-id">@</span>}
+                  <span
+                    className="duty-chip-remove"
+                    draggable={false}
+                    onDragStart={(e) => e.stopPropagation()}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setPersonToDelete(p)
+                    }}
+                  >
+                    ×
+                  </span>
+                </div>
+              ))
+            )}
+          </div>
+        </>
+      )}
 
       <div className="duty-calendar">
         <div className="duty-calendar-header">

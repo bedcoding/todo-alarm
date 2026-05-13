@@ -2156,6 +2156,33 @@ input:focus, textarea:focus {
   cursor: not-allowed;
 }
 
+.duty-section-header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  background: transparent;
+  color: #c0c4cc;
+  border: none;
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.duty-section-header:hover {
+  background: rgba(255, 255, 255, 0.04);
+  color: #e0e0e0;
+}
+
+.duty-section-arrow {
+  display: inline-block;
+  width: 10px;
+  font-size: 9px;
+  color: #777;
+}
+
 .duty-people-pool {
   display: flex;
   flex-wrap: wrap;

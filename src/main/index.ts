@@ -41,6 +41,8 @@ let alarmIntervalId: ReturnType<typeof setInterval> | null = null
 let scheduledTimers: ReturnType<typeof setTimeout>[] = []
 let morningAlertTimer: ReturnType<typeof setTimeout> | null = null
 let dutyAlertTimer: ReturnType<typeof setTimeout> | null = null
+let dutyNextDayTimer: ReturnType<typeof setTimeout> | null = null
+let dutyMidnightTimer: ReturnType<typeof setTimeout> | null = null
 let awayCheckIntervalId: ReturnType<typeof setInterval> | null = null
 let trashTimers: ReturnType<typeof setTimeout>[] = []
 let awayAlertSent = false
@@ -459,6 +461,10 @@ function scheduleDutyAlert(): void {
     clearTimeout(dutyAlertTimer)
     dutyAlertTimer = null
   }
+  if (dutyNextDayTimer) {
+    clearTimeout(dutyNextDayTimer)
+    dutyNextDayTimer = null
+  }
 
   const data = readData()
   const { duty } = data
@@ -466,23 +472,57 @@ function scheduleDutyAlert(): void {
 
   const now = new Date()
   const todayStr = todayDateStr(now)
-  if (duty.lastSentDate === todayStr) return
+  const alreadySentToday = duty.lastSentDate === todayStr
 
   const [h, m] = duty.alertTime.split(':').map(Number)
   const target = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m)
   const diff = target.getTime() - now.getTime()
 
-  if (diff < -120000) {
-    // 2분 이상 지남 → 즉시 발송 (놓친 알림)
-    dispatchDutyAlert()
-  } else if (diff <= 0) {
-    // 알림 시각 ~ +2분 → 즉시
-    dispatchDutyAlert()
-  } else {
-    dutyAlertTimer = setTimeout(() => {
+  if (!alreadySentToday) {
+    if (diff < -120000) {
+      // 2분 이상 지남 → 즉시 발송 (놓친 알림)
       dispatchDutyAlert()
-    }, diff)
+    } else if (diff <= 0) {
+      // 알림 시각 ~ +2분 → 즉시
+      dispatchDutyAlert()
+    } else {
+      dutyAlertTimer = setTimeout(() => {
+        dispatchDutyAlert()
+        scheduleDutyNextDay()
+      }, diff)
+      return
+    }
   }
+  // 오늘 발송 끝났거나 즉시 발송 후 → 24h 뒤 재예약
+  scheduleDutyNextDay()
+}
+
+function scheduleDutyNextDay(): void {
+  if (dutyNextDayTimer) {
+    clearTimeout(dutyNextDayTimer)
+    dutyNextDayTimer = null
+  }
+  // 24시간 후 다시 scheduleDutyAlert (B: 발송 직후 재예약)
+  dutyNextDayTimer = setTimeout(() => {
+    scheduleDutyAlert()
+  }, 24 * 60 * 60 * 1000)
+}
+
+function scheduleDutyMidnightTrigger(): void {
+  if (dutyMidnightTimer) {
+    clearTimeout(dutyMidnightTimer)
+    dutyMidnightTimer = null
+  }
+  // A: 매일 새벽 1시에 강제 재계산 (날짜 바뀐 뒤 lastSentDate 자연 리셋)
+  const now = new Date()
+  const next = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 1, 0)
+  if (next.getTime() <= now.getTime()) {
+    next.setDate(next.getDate() + 1)
+  }
+  dutyMidnightTimer = setTimeout(() => {
+    scheduleDutyAlert()
+    scheduleDutyMidnightTrigger()
+  }, next.getTime() - now.getTime())
 }
 
 function cleanupTrash(): void {
@@ -659,6 +699,7 @@ app.whenReady().then(() => {
   createPopupWindow()
   startAlarmChecker()
   startAwayChecker()
+  scheduleDutyMidnightTrigger()
 
   powerMonitor.on('resume', () => {
     restartAlarmChecker()

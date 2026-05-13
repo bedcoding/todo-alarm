@@ -99,6 +99,7 @@ export interface DutySettings {
   slackChannelId: string
   peopleFilePath: string
   assignmentsFilePath: string
+  peoplePoolCollapsed: boolean
 }
 
 export const DEFAULT_DUTY: DutySettings = {
@@ -112,6 +113,7 @@ export const DEFAULT_DUTY: DutySettings = {
   slackChannelId: '',
   peopleFilePath: '',
   assignmentsFilePath: '',
+  peoplePoolCollapsed: false,
 }
 
 export interface AppData {
