@@ -34,9 +34,11 @@ export default function DutyTab({ duty, onSave }: DutyTabProps) {
   const [showSettings, setShowSettings] = useState(false)
   const [personToDelete, setPersonToDelete] = useState<DutyPerson | null>(null)
   const [confirmClearAll, setConfirmClearAll] = useState(false)
-  const [peoplePath, setPeoplePath] = useState(duty.peopleFilePath)
-  const [assignmentsPath, setAssignmentsPath] = useState(duty.assignmentsFilePath)
   const [applyStatus, setApplyStatus] = useState<{ kind: 'idle' | 'loading' | 'success' | 'fail'; msg?: string }>({ kind: 'idle' })
+  const peoplePath = duty.peopleFilePath
+  const assignmentsPath = duty.assignmentsFilePath
+  const setPeoplePath = (v: string) => onSave({ ...duty, peopleFilePath: v })
+  const setAssignmentsPath = (v: string) => onSave({ ...duty, assignmentsFilePath: v })
   const today = new Date()
   const [viewYear, setViewYear] = useState(today.getFullYear())
   const [viewMonth, setViewMonth] = useState(today.getMonth())
