@@ -2019,6 +2019,14 @@ input:focus, textarea:focus {
   margin-top: 10px;
 }
 
+.duty-alert-status {
+  margin-top: 4px;
+  margin-bottom: 4px;
+  font-size: 11px;
+  color: #8a909a;
+  text-align: right;
+}
+
 .duty-clear-all-btn {
   width: 100%;
   padding: 8px 12px;

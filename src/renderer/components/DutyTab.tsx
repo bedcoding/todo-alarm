@@ -25,6 +25,23 @@ function todayStr(): string {
   return dateStr(t.getFullYear(), t.getMonth(), t.getDate())
 }
 
+function getDutyAlertStatus(duty: DutySettings): string {
+  if (!duty.enabled) return '⏸ 당직 알림 꺼져 있음'
+  const today = todayStr()
+  const [h, m] = duty.alertTime.split(':').map(Number)
+  const timeLabel = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
+  const now = new Date()
+  const target = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m)
+  const sentToday = duty.lastSentDate === today
+  if (sentToday) {
+    return `✓ 오늘 이미 발송됨 · 다음 발송: 내일 ${timeLabel}`
+  }
+  if (target.getTime() > now.getTime()) {
+    return `→ 다음 발송: 오늘 ${timeLabel}`
+  }
+  return `→ 곧 발송 예정 (오늘 ${timeLabel} 지남, 잠시 후 자동 발송)`
+}
+
 export default function DutyTab({ duty, onSave }: DutyTabProps) {
   const [newName, setNewName] = useState('')
   const [newSlackId, setNewSlackId] = useState('')
@@ -395,6 +412,7 @@ export default function DutyTab({ duty, onSave }: DutyTabProps) {
                 className="time-input"
               />
             </div>
+            <div className="duty-alert-status">{getDutyAlertStatus(duty)}</div>
             <button
               className="test-notification-btn duty-modal-btn"
               onClick={handleTest}
