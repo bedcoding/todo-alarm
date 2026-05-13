@@ -5,3 +5,4 @@ dist/
 settings.json
 .claude/settings.local.json
 .mcp.json
+SYNC_LOCAL.md

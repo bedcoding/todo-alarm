@@ -30,7 +30,7 @@
     "appId": "com.todoalarm.app",
     "productName": "Todo Alarm",
     "mac": {
-      "target": "dmg",
+      "target": "zip",
       "icon": "resources/icon.icns"
     },
     "win": {
