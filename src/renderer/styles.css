@@ -2113,7 +2113,8 @@ input:focus, textarea:focus {
   margin-bottom: 6px;
 }
 
-.duty-file-row label {
+.duty-file-row label,
+.duty-file-row .duty-file-label {
   font-size: 12px;
   color: #c0c4cc;
   min-width: 60px;
@@ -2123,6 +2124,7 @@ input:focus, textarea:focus {
 }
 
 .duty-file-help {
+  position: relative;
   width: 16px;
   height: 16px;
   border-radius: 50%;
@@ -2135,6 +2137,29 @@ input:focus, textarea:focus {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  overflow: visible;
+}
+
+.duty-file-help-tip {
+  display: none;
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1a1a2e;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  padding: 5px 8px;
+  font-size: 11px;
+  font-weight: 400;
+  color: #aaa;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 60;
+}
+
+.duty-file-help:hover .duty-file-help-tip {
+  display: block;
 }
 
 .duty-file-help:hover {
@@ -2142,23 +2167,73 @@ input:focus, textarea:focus {
   color: #e0e0e0;
 }
 
-.duty-schema-modal {
-  max-width: 95vw;
-  width: 500px;
+.duty-file-help-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.duty-file-help-popover {
+  position: absolute;
+  top: 100%;
+  left: -10px;
+  margin-top: 6px;
+  z-index: 50;
+  background: #1a1d28;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  padding: 8px 10px;
+  width: 260px;
+  max-width: 80vw;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.5);
+}
+
+
+.duty-file-help-title {
+  font-size: 12px;
+  color: #c0c4cc;
+  margin-bottom: 6px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.duty-file-help-close {
+  background: transparent;
+  border: none;
+  color: #888;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 4px;
+}
+
+.duty-file-help-close:hover {
+  color: #fff;
+}
+
+.duty-file-help-popover pre,
+.duty-file-help-popover .duty-schema-code {
+  user-select: text;
+  -webkit-user-select: text;
+  cursor: text;
 }
 
 .duty-schema-code {
   background: #0f1626;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 6px;
-  padding: 10px 12px;
+  padding: 8px 10px;
   font-family: 'SF Mono', Menlo, Monaco, monospace;
-  font-size: 11px;
+  font-size: 10px;
   color: #d0d8e0;
   white-space: pre;
-  overflow-x: auto;
-  margin: 8px 0;
-  max-height: 50vh;
+  overflow: auto;
+  max-height: 140px;
+  margin: 4px 0 0 0;
 }
 
 .duty-file-row input {
