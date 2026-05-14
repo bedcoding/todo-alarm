@@ -14,8 +14,8 @@ export default function SettingsTab({ settings, onSave, duty, onDutySave }: Sett
   const [dutySlackTestStatus, setDutySlackTestStatus] = useState<'idle' | 'loading' | 'success' | 'fail'>('idle')
   const [textEdits, setTextEdits] = useState<Partial<Settings>>({})
   const [dutyTextEdits, setDutyTextEdits] = useState<Partial<DutySettings>>({})
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>()
-  const dutyDebounceRef = useRef<ReturnType<typeof setTimeout>>()
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  const dutyDebounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
   const update = (patch: Partial<Settings>) => {
     onSave({ ...settings, ...patch })
@@ -251,7 +251,7 @@ export default function SettingsTab({ settings, onSave, duty, onDutySave }: Sett
               {dutySlackTestStatus === 'loading' && '전송 중...'}
               {dutySlackTestStatus === 'success' && '전송 성공!'}
               {dutySlackTestStatus === 'fail' && '전송 실패'}
-              {dutySlackTestStatus === 'idle' && '당직 Slack 테스트'}
+              {dutySlackTestStatus === 'idle' && 'Slack 테스트'}
             </button>
           </div>
             </>
