@@ -39,5 +39,6 @@ contextBridge.exposeInMainWorld('api', {
   testDutySlack: (config: unknown) => ipcRenderer.invoke('test-duty-slack', config),
   pickFile: (kind: 'people' | 'assignments') => ipcRenderer.invoke('pick-duty-file', kind),
   applyDutyFiles: (paths: { peopleFilePath: string; assignmentsFilePath: string }) =>
-    ipcRenderer.invoke('apply-duty-files', paths)
+    ipcRenderer.invoke('apply-duty-files', paths),
+  resetDutyLastSent: () => ipcRenderer.invoke('reset-duty-last-sent')
 })

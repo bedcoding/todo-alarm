@@ -865,6 +865,15 @@ ipcMain.handle('test-duty-slack', async (_, config: { method: string; webhookUrl
   }
 })
 
+ipcMain.handle('reset-duty-last-sent', () => {
+  const data = readData()
+  data.duty.lastSentDate = ''
+  writeData(data)
+  sendToAllWindows('duty-updated', data.duty)
+  scheduleDutyAlert()
+  return true
+})
+
 ipcMain.handle('pick-duty-file', async (_, kind: 'people' | 'assignments') => {
   const title = kind === 'people' ? '사람 파일 선택 (people.json)' : '월별 배정 파일 선택 (YYYY-MM.json)'
   const result = await dialog.showOpenDialog({

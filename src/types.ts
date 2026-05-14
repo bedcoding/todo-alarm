@@ -153,6 +153,7 @@ export interface ElectronAPI {
   testDutySlack: (config: { method: SlackMethod; webhookUrl: string; botToken: string; channelId: string }) => Promise<{ success: boolean; error?: string }>
   pickFile: (kind: 'people' | 'assignments') => Promise<{ canceled: boolean; path?: string }>
   applyDutyFiles: (paths: { peopleFilePath: string; assignmentsFilePath: string }) => Promise<{ success: boolean; error?: string; peopleCount?: number; assignmentsCount?: number }>
+  resetDutyLastSent: () => Promise<boolean>
 }
 
 declare global {

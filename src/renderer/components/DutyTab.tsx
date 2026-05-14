@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import type { DutySettings, DutyPerson } from '../../types'
 import ConfirmDialog from './ConfirmDialog'
 
@@ -25,7 +25,7 @@ function todayStr(): string {
   return dateStr(t.getFullYear(), t.getMonth(), t.getDate())
 }
 
-function getDutyAlertStatus(duty: DutySettings): string {
+function renderDutyAlertStatus(duty: DutySettings, onReset: () => void): ReactNode {
   if (!duty.enabled) return '⏸ 당직 알림 꺼져 있음'
   const today = todayStr()
   const [h, m] = duty.alertTime.split(':').map(Number)
@@ -34,7 +34,13 @@ function getDutyAlertStatus(duty: DutySettings): string {
   const target = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m)
   const sentToday = duty.lastSentDate === today
   if (sentToday) {
-    return `✓ 오늘 이미 발송됨 · 다음 발송: 내일 ${timeLabel}`
+    return (
+      <>
+        ✓ 오늘 이미 발송됨 · 다음 발송: 내일 {timeLabel}
+        {' · '}
+        <button type="button" className="duty-alert-reset" onClick={onReset}>↺ 발송 초기화</button>
+      </>
+    )
   }
   if (target.getTime() > now.getTime()) {
     return `→ 다음 발송: 오늘 ${timeLabel}`
@@ -412,7 +418,7 @@ export default function DutyTab({ duty, onSave }: DutyTabProps) {
                 className="time-input"
               />
             </div>
-            <div className="duty-alert-status">{getDutyAlertStatus(duty)}</div>
+            <div className="duty-alert-status">{renderDutyAlertStatus(duty, () => window.api.resetDutyLastSent())}</div>
             <button
               className="test-notification-btn duty-modal-btn"
               onClick={handleTest}

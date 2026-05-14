@@ -2027,6 +2027,20 @@ input:focus, textarea:focus {
   text-align: right;
 }
 
+.duty-alert-reset {
+  background: transparent;
+  border: none;
+  color: #5db8ff;
+  font-size: 11px;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+}
+
+.duty-alert-reset:hover {
+  color: #87ceff;
+}
+
 .duty-clear-all-btn {
   width: 100%;
   padding: 8px 12px;
