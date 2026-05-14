@@ -56,6 +56,7 @@ export default function DutyTab({ duty, onSave }: DutyTabProps) {
   const [testStatus, setTestStatus] = useState<'idle' | 'loading' | 'success' | 'fail'>('idle')
   const [showSettings, setShowSettings] = useState(false)
   const [personToDelete, setPersonToDelete] = useState<DutyPerson | null>(null)
+  const [assignmentToRemove, setAssignmentToRemove] = useState<{ date: string; person: DutyPerson } | null>(null)
   const [confirmClearAll, setConfirmClearAll] = useState(false)
   const [applyStatus, setApplyStatus] = useState<{ kind: 'idle' | 'loading' | 'success' | 'fail'; msg?: string }>({ kind: 'idle' })
   const peoplePoolCollapsed = duty.peoplePoolCollapsed
@@ -238,6 +239,7 @@ export default function DutyTab({ duty, onSave }: DutyTabProps) {
 
   return (
     <div className="duty-tab">
+      <div className="duty-scroll-area">
       <button
         className="duty-section-header"
         onClick={togglePeoplePool}
@@ -348,7 +350,7 @@ export default function DutyTab({ duty, onSave }: DutyTabProps) {
                           key={id}
                           className="duty-day-name-tag"
                           title="클릭하여 제거"
-                          onClick={() => toggleAssignment(cell.dateString, id)}
+                          onClick={() => setAssignmentToRemove({ date: cell.dateString, person })}
                           style={{ color: person.color }}
                         >
                           {person.name}
@@ -361,6 +363,7 @@ export default function DutyTab({ duty, onSave }: DutyTabProps) {
             )
           })}
         </div>
+      </div>
       </div>
 
       <button className="inline-settings-toggle" onClick={() => setShowSettings(true)}>
@@ -376,6 +379,18 @@ export default function DutyTab({ duty, onSave }: DutyTabProps) {
             setPersonToDelete(null)
           }}
           onCancel={() => setPersonToDelete(null)}
+        />
+      )}
+
+      {assignmentToRemove && (
+        <ConfirmDialog
+          message={`${assignmentToRemove.date} 의 ${assignmentToRemove.person.name} 배정을 제거할까요?`}
+          confirmLabel="제거"
+          onConfirm={() => {
+            toggleAssignment(assignmentToRemove.date, assignmentToRemove.person.id)
+            setAssignmentToRemove(null)
+          }}
+          onCancel={() => setAssignmentToRemove(null)}
         />
       )}
 

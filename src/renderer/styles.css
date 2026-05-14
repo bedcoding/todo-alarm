@@ -117,7 +117,7 @@ body {
   gap: 24px;
   height: 100%;
   position: relative;
-  padding-bottom: 50px;
+  padding-bottom: 25px;
 }
 
 .schedule-left {
@@ -1081,12 +1081,12 @@ input:focus, textarea:focus {
 
 .inline-settings-toggle {
   position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
+  bottom: -20px;
+  left: -20px;
+  right: -20px;
   background: rgba(233, 69, 96, 0.15);
   border: none;
-  border-radius: 8px;
+  border-radius: 0;
   color: #e94560;
   font-size: 12px;
   cursor: pointer;
@@ -1529,7 +1529,7 @@ input:focus, textarea:focus {
   height: 100%;
   padding: 16px;
   position: relative;
-  padding-bottom: 50px;
+  padding-bottom: 25px;
 }
 
 .away-check-help {
@@ -1958,7 +1958,8 @@ input:focus, textarea:focus {
   gap: 12px;
   flex: 1;
   min-height: 0;
-  overflow-y: auto;
+  position: relative;
+  padding-bottom: 25px;
 }
 
 .duty-tab > * {
@@ -2284,6 +2285,15 @@ input:focus, textarea:focus {
 
 .duty-chip-remove:hover {
   color: #e94560;
+}
+
+.duty-scroll-area {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 .duty-calendar {
