@@ -1029,10 +1029,10 @@ input:focus, textarea:focus {
 
 /* ===== 설정 탭 ===== */
 .settings-tab {
-  padding: 16px;
+  padding: 12px 16px;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 12px;
   overflow-y: auto;
   height: 100%;
 }
@@ -1525,7 +1525,8 @@ input:focus, textarea:focus {
   text-align: center;
   color: #555;
   font-size: 11px;
-  padding-top: 12px;
+  padding-top: 4px;
+  margin-top: auto;
 }
 
 /* 저장 버튼 */
