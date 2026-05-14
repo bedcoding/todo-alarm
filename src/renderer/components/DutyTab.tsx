@@ -59,6 +59,7 @@ export default function DutyTab({ duty, onSave }: DutyTabProps) {
   const [assignmentToRemove, setAssignmentToRemove] = useState<{ date: string; person: DutyPerson } | null>(null)
   const [confirmClearAll, setConfirmClearAll] = useState(false)
   const [applyStatus, setApplyStatus] = useState<{ kind: 'idle' | 'loading' | 'success' | 'fail'; msg?: string }>({ kind: 'idle' })
+  const [schemaHelp, setSchemaHelp] = useState<'people' | 'assignments' | null>(null)
   const peoplePoolCollapsed = duty.peoplePoolCollapsed
   const togglePeoplePool = () => onSave({ ...duty, peoplePoolCollapsed: !duty.peoplePoolCollapsed })
   const peoplePath = duty.peopleFilePath
@@ -449,7 +450,10 @@ export default function DutyTab({ duty, onSave }: DutyTabProps) {
             <div className="duty-file-sync">
               <div className="duty-file-sync-title">파일에서 가져오기</div>
               <div className="duty-file-row">
-                <label>사람 파일</label>
+                <label>
+                  사람 파일
+                  <button type="button" className="duty-file-help" onClick={() => setSchemaHelp('people')} title="파일 형식 보기">?</button>
+                </label>
                 <input
                   type="text"
                   placeholder="/.../people.json"
@@ -459,7 +463,10 @@ export default function DutyTab({ duty, onSave }: DutyTabProps) {
                 <button onClick={() => pickFile('people')} className="duty-file-pick">찾기</button>
               </div>
               <div className="duty-file-row">
-                <label>월별 배정</label>
+                <label>
+                  월별 배정
+                  <button type="button" className="duty-file-help" onClick={() => setSchemaHelp('assignments')} title="파일 형식 보기">?</button>
+                </label>
                 <input
                   type="text"
                   placeholder="/.../assignments/2026-05.json"
@@ -490,6 +497,50 @@ export default function DutyTab({ duty, onSave }: DutyTabProps) {
           </div>
         </>
       )}
+
+      {schemaHelp && (
+        <>
+          <div className="picker-overlay" onClick={() => setSchemaHelp(null)} />
+          <div className="settings-modal duty-schema-modal">
+            <div className="settings-modal-title">
+              {schemaHelp === 'people' ? 'people.json 형식' : 'assignments/YYYY-MM.json 형식'}
+            </div>
+            <pre className="duty-schema-code">{schemaHelp === 'people' ? PEOPLE_SCHEMA_EXAMPLE : ASSIGNMENTS_SCHEMA_EXAMPLE}</pre>
+            <button className="picker-close-btn duty-modal-btn" onClick={() => setSchemaHelp(null)}>닫기</button>
+          </div>
+        </>
+      )}
     </div>
   )
 }
+
+const PEOPLE_SCHEMA_EXAMPLE = `[
+  {
+    "id": "p_hong_gildong",
+    "name": "홍길동",
+    "team": "backend",
+    "slackUserId": "U07ABC123",
+    "color": "hsl(212, 68%, 62%)"
+  },
+  {
+    "id": "p_kim_chulsoo",
+    "name": "김철수",
+    "team": "frontend",
+    "slackUserId": "",
+    "color": "hsl(28, 78%, 58%)"
+  }
+]`
+
+const ASSIGNMENTS_SCHEMA_EXAMPLE = `{
+  "month": "2026-05",
+  "entries": [
+    {
+      "date": "2026-05-12",
+      "personIds": ["p_hong_gildong"]
+    },
+    {
+      "date": "2026-05-13",
+      "personIds": ["p_hong_gildong", "p_kim_chulsoo"]
+    }
+  ]
+}`

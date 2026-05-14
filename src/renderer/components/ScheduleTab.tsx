@@ -314,10 +314,10 @@ export default function ScheduleTab({ schedules, onSave, onDelete, settings, onS
               알림 설정
             </div>
             <div className="settings-row">
-              <label>macOS 알림</label>
+              <label>일정 알림</label>
               <div
-                className={`toggle ${settings.macNotification ? 'on' : ''}`}
-                onClick={() => onSettingsChange({ macNotification: !settings.macNotification })}
+                className={`toggle ${settings.scheduleEnabled ? 'on' : ''}`}
+                onClick={() => onSettingsChange({ scheduleEnabled: !settings.scheduleEnabled })}
               >
                 <div className="toggle-knob" />
               </div>

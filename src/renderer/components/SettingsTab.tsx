@@ -9,6 +9,7 @@ interface SettingsTabProps {
 }
 
 export default function SettingsTab({ settings, onSave, duty, onDutySave }: SettingsTabProps) {
+  const [activeSlackSection, setActiveSlackSection] = useState<'general' | 'duty'>('general')
   const [slackTestStatus, setSlackTestStatus] = useState<'idle' | 'loading' | 'success' | 'fail'>('idle')
   const [dutySlackTestStatus, setDutySlackTestStatus] = useState<'idle' | 'loading' | 'success' | 'fail'>('idle')
   const [textEdits, setTextEdits] = useState<Partial<Settings>>({})
@@ -77,6 +78,24 @@ export default function SettingsTab({ settings, onSave, duty, onDutySave }: Sett
 
   return (
     <div className="settings-tab">
+      <div className="slack-subtab">
+        <button
+          type="button"
+          className={`slack-subtab-btn ${activeSlackSection === 'general' ? 'active' : ''}`}
+          onClick={() => setActiveSlackSection('general')}
+        >
+          일정 / 이석
+        </button>
+        <button
+          type="button"
+          className={`slack-subtab-btn ${activeSlackSection === 'duty' ? 'active' : ''}`}
+          onClick={() => setActiveSlackSection('duty')}
+        >
+          당직
+        </button>
+      </div>
+
+      {activeSlackSection === 'general' && (
       <div className="settings-section">
           <div className="settings-row">
             <label>Slack 알림 (일정/이석)</label>
@@ -156,13 +175,22 @@ export default function SettingsTab({ settings, onSave, duty, onDutySave }: Sett
             </>
           )}
         </div>
+      )}
 
+      {activeSlackSection === 'duty' && (
         <div className="settings-section">
           <div className="settings-row">
             <label>Slack 알림 (당직)</label>
-            <div className="settings-hint">당직 탭 전용 채널 설정</div>
+            <div
+              className={`toggle ${duty.slackEnabled ? 'on' : ''}`}
+              onClick={() => updateDuty({ slackEnabled: !duty.slackEnabled })}
+            >
+              <div className="toggle-knob" />
+            </div>
           </div>
 
+          {duty.slackEnabled && (
+            <>
           <div className="settings-row">
             <label>연동 방식</label>
             <select
@@ -226,8 +254,12 @@ export default function SettingsTab({ settings, onSave, duty, onDutySave }: Sett
               {dutySlackTestStatus === 'idle' && '당직 Slack 테스트'}
             </button>
           </div>
+            </>
+          )}
         </div>
-        <div className="version-info">v{__APP_VERSION__} ({__BUILD_DATE__})</div>
+      )}
+
+      <div className="version-info">v{__APP_VERSION__} ({__BUILD_DATE__})</div>
     </div>
   )
 }

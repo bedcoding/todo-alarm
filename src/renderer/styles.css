@@ -1071,6 +1071,36 @@ input:focus, textarea:focus {
   padding: 8px 16px;
 }
 
+.slack-subtab {
+  display: flex;
+  gap: 4px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+  padding: 3px;
+}
+
+.slack-subtab-btn {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: #9ba2ad;
+  padding: 8px 12px;
+  font-size: 13px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.slack-subtab-btn:hover {
+  color: #e0e0e0;
+}
+
+.slack-subtab-btn.active {
+  background: rgba(233, 69, 96, 0.18);
+  color: #e94560;
+}
+
 .inline-settings {
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.06);
@@ -2087,6 +2117,48 @@ input:focus, textarea:focus {
   font-size: 12px;
   color: #c0c4cc;
   min-width: 60px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.duty-file-help {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  border: none;
+  color: #9ba2ad;
+  font-size: 10px;
+  cursor: pointer;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.duty-file-help:hover {
+  background: rgba(255, 255, 255, 0.18);
+  color: #e0e0e0;
+}
+
+.duty-schema-modal {
+  max-width: 95vw;
+  width: 500px;
+}
+
+.duty-schema-code {
+  background: #0f1626;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  padding: 10px 12px;
+  font-family: 'SF Mono', Menlo, Monaco, monospace;
+  font-size: 11px;
+  color: #d0d8e0;
+  white-space: pre;
+  overflow-x: auto;
+  margin: 8px 0;
+  max-height: 50vh;
 }
 
 .duty-file-row input {

@@ -248,16 +248,16 @@ function sendSlackNotification(settings: Settings, message: string): Promise<boo
 }
 
 function sendScheduleNotification(schedule: Schedule, missed: boolean, settings: Settings): void {
+  if (!settings.scheduleEnabled) return
+
   const timingText = settings.alertTiming > 0 ? ` (${settings.alertTiming}분 전)` : ''
   const title = missed ? `📌 놓친 알림` : `📌 일정 알림${timingText}`
 
-  if (settings.macNotification) {
-    new Notification({
-      title: `${title} ${schedule.date} ${schedule.time}`,
-      body: schedule.content,
-      sound: 'default'
-    }).show()
-  }
+  new Notification({
+    title: `${title} ${schedule.date} ${schedule.time}`,
+    body: schedule.content,
+    sound: 'default'
+  }).show()
 
   if (settings.slackEnabled) {
     const prefix = missed ? `📌 *놓친 알림*` : `📌 *일정 알림${timingText}*`
@@ -304,15 +304,13 @@ function scheduleMorningAlert(): void {
   if (diff < -120000) {
     // 2분 넘게 지남 → 놓친 알림으로 즉시 발송
     const todaySchedules = data.schedules.filter((s) => s.date === todayStr)
-    if (todaySchedules.length > 0) {
+    if (todaySchedules.length > 0 && settings.scheduleEnabled) {
       const body = todaySchedules.map((s) => `${s.time} ${s.content}`).join('\n')
-      if (settings.macNotification) {
-        new Notification({
-          title: `📋 오늘 일정 (${todaySchedules.length}건)`,
-          body,
-          sound: 'default'
-        }).show()
-      }
+      new Notification({
+        title: `📋 오늘 일정 (${todaySchedules.length}건)`,
+        body,
+        sound: 'default'
+      }).show()
       if (settings.slackEnabled) {
         sendSlackNotification(settings, `📋 *오늘 일정 (${todaySchedules.length}건)*\n${body}`)
       }
@@ -321,15 +319,13 @@ function scheduleMorningAlert(): void {
   } else if (diff <= 0) {
     // 지금이 알림 시각 ~ +2분 이내 → 즉시 발송
     const todaySchedules = data.schedules.filter((s) => s.date === todayStr)
-    if (todaySchedules.length > 0) {
+    if (todaySchedules.length > 0 && settings.scheduleEnabled) {
       const body = todaySchedules.map((s) => `${s.time} ${s.content}`).join('\n')
-      if (settings.macNotification) {
-        new Notification({
-          title: `📋 오늘 일정 (${todaySchedules.length}건)`,
-          body,
-          sound: 'default'
-        }).show()
-      }
+      new Notification({
+        title: `📋 오늘 일정 (${todaySchedules.length}건)`,
+        body,
+        sound: 'default'
+      }).show()
       if (settings.slackEnabled) {
         sendSlackNotification(settings, `📋 *오늘 일정 (${todaySchedules.length}건)*\n${body}`)
       }
@@ -343,15 +339,13 @@ function scheduleMorningAlert(): void {
       const now = new Date()
       const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
       const todaySchedules = data.schedules.filter((s) => s.date === todayStr)
-      if (todaySchedules.length > 0) {
+      if (todaySchedules.length > 0 && settings.scheduleEnabled) {
         const body = todaySchedules.map((s) => `${s.time} ${s.content}`).join('\n')
-        if (settings.macNotification) {
-          new Notification({
-            title: `📋 오늘 일정 (${todaySchedules.length}건)`,
-            body,
-            sound: 'default'
-          }).show()
-        }
+        new Notification({
+          title: `📋 오늘 일정 (${todaySchedules.length}건)`,
+          body,
+          sound: 'default'
+        }).show()
         if (settings.slackEnabled) {
           sendSlackNotification(settings, `📋 *오늘 일정 (${todaySchedules.length}건)*\n${body}`)
         }
@@ -438,20 +432,20 @@ function dispatchDutyAlert(): void {
     return
   }
 
-  // mac 알림
-  if (data.settings.macNotification) {
-    const body = message.replace(/^🔔 \*당직 알림\*\n?/, '')
-    new Notification({ title: '🔔 당직 알림', body, sound: 'default' }).show()
-  }
+  // mac 알림 (당직 알림 마스터 토글 duty.enabled가 위에서 이미 확인됨)
+  const body = message.replace(/^🔔 \*당직 알림\*\n?/, '')
+  new Notification({ title: '🔔 당직 알림', body, sound: 'default' }).show()
 
   // 슬랙 (당직용 별도 설정)
-  sendSlackByConfig(
-    duty.slackMethod,
-    duty.slackWebhookUrl,
-    duty.slackBotToken,
-    duty.slackChannelId,
-    message
-  )
+  if (duty.slackEnabled) {
+    sendSlackByConfig(
+      duty.slackMethod,
+      duty.slackWebhookUrl,
+      duty.slackBotToken,
+      duty.slackChannelId,
+      message
+    )
+  }
 
   saveDutyLastSentDate(todayStr)
 }
@@ -658,13 +652,11 @@ function startAwayChecker(): void {
       if (!awayAlertSent) {
         awayAlertSent = true
 
-        if (current.settings.macNotification) {
-          new Notification({
-            title: '⚠️ 이석 경고!',
-            body: `${current.awayCheck.limitMinutes}분 이상 자리를 비웠습니다!`,
-            sound: 'default'
-          }).show()
-        }
+        new Notification({
+          title: '⚠️ 이석 경고!',
+          body: `${current.awayCheck.limitMinutes}분 이상 자리를 비웠습니다!`,
+          sound: 'default'
+        }).show()
 
         if (current.settings.slackEnabled) {
           sendSlackNotification(

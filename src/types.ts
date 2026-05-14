@@ -17,7 +17,7 @@ export type SlackMethod = 'webhook' | 'bot'
 
 export interface Settings {
   checkInterval: number // ms (1800000 ~ 86400000)
-  macNotification: boolean
+  scheduleEnabled: boolean
   alertTiming: number // 분 단위 (0 = 정시, 5, 10, 30)
   morningAlertEnabled: boolean
   morningAlertTime: string // "09:00" 형식
@@ -30,7 +30,7 @@ export interface Settings {
 
 export const DEFAULT_SETTINGS: Settings = {
   checkInterval: 43200000,
-  macNotification: true,
+  scheduleEnabled: true,
   alertTiming: 0,
   morningAlertEnabled: false,
   morningAlertTime: '09:00',
@@ -93,6 +93,7 @@ export interface DutySettings {
   people: DutyPerson[]
   assignments: DutyAssignment[]
   lastSentDate?: string
+  slackEnabled: boolean
   slackMethod: SlackMethod
   slackWebhookUrl: string
   slackBotToken: string
@@ -107,6 +108,7 @@ export const DEFAULT_DUTY: DutySettings = {
   alertTime: '09:00',
   people: [],
   assignments: [],
+  slackEnabled: true,
   slackMethod: 'webhook',
   slackWebhookUrl: '',
   slackBotToken: '',
