@@ -2193,6 +2193,11 @@ input:focus, textarea:focus {
   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.5);
 }
 
+.duty-file-help-popover.align-left {
+  left: auto;
+  right: -10px;
+}
+
 
 .duty-file-help-title {
   font-size: 12px;
@@ -2280,6 +2285,17 @@ input:focus, textarea:focus {
 .duty-import-mode-btn.active {
   background: #2a2f3a;
   color: #e0e0e0;
+}
+
+.duty-paste-wrap {
+  position: relative;
+}
+
+.duty-paste-help {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 5;
 }
 
 .duty-paste-area {

@@ -460,31 +460,6 @@ export default function DutyTab({ duty, onSave }: DutyTabProps) {
             </button>
 
             <div className="duty-file-sync">
-              <div className="duty-file-sync-title">
-                API에서 가져오기
-                <span className="duty-file-help-wrap">
-                  <button
-                    type="button"
-                    className="duty-file-help"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      setShowHelp((v) => !v)
-                    }}
-                  >
-                    ⓘ
-                    <span className="duty-file-help-tip">응답 예시</span>
-                  </button>
-                  {showHelp && (
-                    <div className="duty-file-help-popover">
-                      <div className="duty-file-help-title">
-                        응답/붙여넣기 JSON 형식
-                        <button type="button" className="duty-file-help-close" onClick={() => setShowHelp(false)}>×</button>
-                      </div>
-                      <pre className="duty-schema-code">{API_SCHEMA_EXAMPLE}</pre>
-                    </div>
-                  )}
-                </span>
-              </div>
               <div className="duty-import-mode">
                 <button
                   type="button"
@@ -499,7 +474,10 @@ export default function DutyTab({ duty, onSave }: DutyTabProps) {
               </div>
               {importMode === 'url' ? (
                 <div className="duty-file-row">
-                  <div className="duty-file-label">API URL</div>
+                  <div className="duty-file-label">
+                    API URL
+                    <SchemaHelp open={showHelp} onToggle={() => setShowHelp((v) => !v)} onClose={() => setShowHelp(false)} />
+                  </div>
                   <input
                     type="text"
                     placeholder="https:/duty-schedule.ax.com/api/duty"
@@ -508,13 +486,23 @@ export default function DutyTab({ duty, onSave }: DutyTabProps) {
                   />
                 </div>
               ) : (
-                <textarea
-                  className="duty-paste-area"
-                  value={pasteText}
-                  onChange={(e) => setPasteText(e.target.value)}
-                  rows={5}
-                  spellCheck={false}
-                />
+                <div className="duty-paste-wrap">
+                  <div className="duty-paste-help">
+                    <SchemaHelp
+                      open={showHelp}
+                      onToggle={() => setShowHelp((v) => !v)}
+                      onClose={() => setShowHelp(false)}
+                      align="left"
+                    />
+                  </div>
+                  <textarea
+                    className="duty-paste-area"
+                    value={pasteText}
+                    onChange={(e) => setPasteText(e.target.value)}
+                    rows={5}
+                    spellCheck={false}
+                  />
+                </div>
               )}
               {duty.lastApiSyncAt && (
                 <div className="duty-last-sync">마지막 동기화: {new Date(duty.lastApiSyncAt).toLocaleString('ko-KR')}</div>
@@ -546,6 +534,38 @@ export default function DutyTab({ duty, onSave }: DutyTabProps) {
       )}
 
     </div>
+  )
+}
+
+function SchemaHelp({
+  open,
+  onToggle,
+  onClose,
+  align = 'right'
+}: { open: boolean; onToggle: () => void; onClose: () => void; align?: 'left' | 'right' }) {
+  return (
+    <span className="duty-file-help-wrap">
+      <button
+        type="button"
+        className="duty-file-help"
+        onClick={(e) => {
+          e.stopPropagation()
+          onToggle()
+        }}
+      >
+        ⓘ
+        <span className="duty-file-help-tip">응답 예시</span>
+      </button>
+      {open && (
+        <div className={`duty-file-help-popover${align === 'left' ? ' align-left' : ''}`}>
+          <div className="duty-file-help-title">
+            응답/붙여넣기 JSON 형식
+            <button type="button" className="duty-file-help-close" onClick={onClose}>×</button>
+          </div>
+          <pre className="duty-schema-code">{API_SCHEMA_EXAMPLE}</pre>
+        </div>
+      )}
+    </span>
   )
 }
 

@@ -370,13 +370,21 @@ function formatDutyMention(person: { name: string; slackUserId: string } | undef
   return person.name
 }
 
+function formatDutyPlainName(person: { name: string } | undefined): string {
+  return person?.name ?? ''
+}
+
 const DUTY_WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토']
 
 function formatDutyDateLabel(d: Date): string {
   return `${d.getMonth() + 1}/${d.getDate()} ${DUTY_WEEKDAYS[d.getDay()]}`
 }
 
-function buildDutyMessage(duty: DutySettings, baseDate = new Date()): string | null {
+function buildDutyMessage(
+  duty: DutySettings,
+  format: 'slack' | 'plain' = 'slack',
+  baseDate = new Date()
+): string | null {
   const todayStr = todayDateStr(baseDate)
   const tomorrow = new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate() + 1)
   const tomorrowStr = todayDateStr(tomorrow)
@@ -387,7 +395,7 @@ function buildDutyMessage(duty: DutySettings, baseDate = new Date()): string | n
     return a.personIds
       .map((pid) => duty.people.find((p) => p.id === pid))
       .filter((p): p is typeof duty.people[number] => !!p)
-      .map((p) => formatDutyMention(p))
+      .map((p) => (format === 'slack' ? formatDutyMention(p) : formatDutyPlainName(p)))
       .join(', ')
   }
 
@@ -396,7 +404,8 @@ function buildDutyMessage(duty: DutySettings, baseDate = new Date()): string | n
 
   if (!todayLine && !tomorrowLine) return null
 
-  const lines: string[] = ['🔔 *당직 알림*']
+  const lines: string[] = []
+  if (format === 'slack') lines.push('🔔 *당직 알림*')
   if (todayLine) lines.push(`(${formatDutyDateLabel(baseDate)}) 오늘 당직: ${todayLine}`)
   if (tomorrowLine) lines.push(`(${formatDutyDateLabel(tomorrow)}) 내일 당직: ${tomorrowLine}`)
   return lines.join('\n')
@@ -430,25 +439,27 @@ function dispatchDutyAlert(): void {
   const todayStr = todayDateStr()
   if (duty.lastSentDate === todayStr) return
 
-  const message = buildDutyMessage(duty)
-  if (!message) {
+  const plainBody = buildDutyMessage(duty, 'plain')
+  if (!plainBody) {
     saveDutyLastSentDate(todayStr)
     return
   }
 
   // mac 알림 (당직 알림 마스터 토글 duty.enabled가 위에서 이미 확인됨)
-  const body = message.replace(/^🔔 \*당직 알림\*\n?/, '')
-  new Notification({ title: '🔔 당직 알림', body, sound: 'default' }).show()
+  new Notification({ title: '🔔 당직 알림', body: plainBody, sound: 'default' }).show()
 
   // 슬랙 (당직용 별도 설정)
   if (duty.slackEnabled) {
-    sendSlackByConfig(
-      duty.slackMethod,
-      duty.slackWebhookUrl,
-      duty.slackBotToken,
-      duty.slackChannelId,
-      message
-    )
+    const slackMessage = buildDutyMessage(duty, 'slack')
+    if (slackMessage) {
+      sendSlackByConfig(
+        duty.slackMethod,
+        duty.slackWebhookUrl,
+        duty.slackBotToken,
+        duty.slackChannelId,
+        slackMessage
+      )
+    }
   }
 
   saveDutyLastSentDate(todayStr)
@@ -851,7 +862,7 @@ ipcMain.handle('save-duty', (_, duty: DutySettings) => {
 ipcMain.handle('test-duty-slack', async (_, config: { method: string; webhookUrl: string; botToken: string; channelId: string }) => {
   try {
     const data = readData()
-    const message = buildDutyMessage(data.duty) ?? '🔔 *당직 알림 테스트*\n오늘/내일 등록된 당직자가 없습니다.'
+    const message = buildDutyMessage(data.duty, 'slack') ?? '🔔 *당직 알림 테스트*\n오늘/내일 등록된 당직자가 없습니다.'
     const success = config.method === 'bot'
       ? await sendSlackBot(config.botToken, config.channelId, message)
       : await sendSlackWebhook(config.webhookUrl, message)
