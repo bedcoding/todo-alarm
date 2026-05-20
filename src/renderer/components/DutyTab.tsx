@@ -512,7 +512,7 @@ export default function DutyTab({ duty, onSave }: DutyTabProps) {
                   className="duty-paste-area"
                   value={pasteText}
                   onChange={(e) => setPasteText(e.target.value)}
-                  rows={8}
+                  rows={5}
                   spellCheck={false}
                 />
               )}
