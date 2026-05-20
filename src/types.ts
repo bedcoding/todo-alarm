@@ -98,8 +98,8 @@ export interface DutySettings {
   slackWebhookUrl: string
   slackBotToken: string
   slackChannelId: string
-  peopleFilePath: string
-  assignmentsFilePath: string
+  apiUrl: string
+  lastApiSyncAt?: string
   peoplePoolCollapsed: boolean
 }
 
@@ -113,8 +113,7 @@ export const DEFAULT_DUTY: DutySettings = {
   slackWebhookUrl: '',
   slackBotToken: '',
   slackChannelId: '',
-  peopleFilePath: '',
-  assignmentsFilePath: '',
+  apiUrl: '',
   peoplePoolCollapsed: false,
 }
 
@@ -153,8 +152,9 @@ export interface ElectronAPI {
   saveDuty: (duty: DutySettings) => Promise<boolean>
   onDutyUpdated: (callback: (duty: DutySettings) => void) => void
   testDutySlack: (config: { method: SlackMethod; webhookUrl: string; botToken: string; channelId: string }) => Promise<{ success: boolean; error?: string }>
-  pickFile: (kind: 'people' | 'assignments') => Promise<{ canceled: boolean; path?: string }>
-  applyDutyFiles: (paths: { peopleFilePath: string; assignmentsFilePath: string }) => Promise<{ success: boolean; error?: string; peopleCount?: number; assignmentsCount?: number }>
+  applyDutyApi: (
+    input: { mode: 'url'; url: string } | { mode: 'paste'; payload: string }
+  ) => Promise<{ success: boolean; error?: string; peopleCount?: number; assignmentsCount?: number; month?: string; syncedAt?: string }>
   resetDutyLastSent: () => Promise<boolean>
 }
 

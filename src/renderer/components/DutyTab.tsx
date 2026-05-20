@@ -59,25 +59,25 @@ export default function DutyTab({ duty, onSave }: DutyTabProps) {
   const [assignmentToRemove, setAssignmentToRemove] = useState<{ date: string; person: DutyPerson } | null>(null)
   const [confirmClearAll, setConfirmClearAll] = useState(false)
   const [applyStatus, setApplyStatus] = useState<{ kind: 'idle' | 'loading' | 'success' | 'fail'; msg?: string }>({ kind: 'idle' })
-  const [openHelp, setOpenHelp] = useState<'people' | 'assignments' | null>(null)
+  const [importMode, setImportMode] = useState<'url' | 'paste'>('url')
+  const [pasteText, setPasteText] = useState(API_SCHEMA_EXAMPLE)
+  const [showHelp, setShowHelp] = useState(false)
 
   useEffect(() => {
-    if (!openHelp) return
+    if (!showHelp) return
     const onDown = (e: MouseEvent) => {
       const target = e.target as HTMLElement | null
       if (target && target.closest('.duty-file-help-wrap')) return
-      setOpenHelp(null)
+      setShowHelp(false)
     }
     document.addEventListener('mousedown', onDown)
     return () => document.removeEventListener('mousedown', onDown)
-  }, [openHelp])
+  }, [showHelp])
 
   const peoplePoolCollapsed = duty.peoplePoolCollapsed
   const togglePeoplePool = () => onSave({ ...duty, peoplePoolCollapsed: !duty.peoplePoolCollapsed })
-  const peoplePath = duty.peopleFilePath
-  const assignmentsPath = duty.assignmentsFilePath
-  const setPeoplePath = (v: string) => onSave({ ...duty, peopleFilePath: v })
-  const setAssignmentsPath = (v: string) => onSave({ ...duty, assignmentsFilePath: v })
+  const apiUrl = duty.apiUrl
+  const setApiUrl = (v: string) => onSave({ ...duty, apiUrl: v })
   const today = new Date()
   const [viewYear, setViewYear] = useState(today.getFullYear())
   const [viewMonth, setViewMonth] = useState(today.getMonth())
@@ -86,28 +86,28 @@ export default function DutyTab({ duty, onSave }: DutyTabProps) {
     ? duty.slackWebhookUrl.trim().length > 0
     : duty.slackBotToken.trim().length > 0 && duty.slackChannelId.trim().length > 0
 
-  const pickFile = async (kind: 'people' | 'assignments') => {
-    const result = await window.api.pickFile(kind)
-    if (result.canceled || !result.path) return
-    if (kind === 'people') setPeoplePath(result.path)
-    else setAssignmentsPath(result.path)
-  }
-
   const handleApply = async () => {
-    if (!peoplePath.trim() || !assignmentsPath.trim()) {
-      setApplyStatus({ kind: 'fail', msg: '두 파일 경로를 모두 입력하세요' })
+    if (importMode === 'url' && !apiUrl.trim()) {
+      setApplyStatus({ kind: 'fail', msg: 'API URL을 입력하세요' })
+      setTimeout(() => setApplyStatus({ kind: 'idle' }), 3000)
+      return
+    }
+    if (importMode === 'paste' && !pasteText.trim()) {
+      setApplyStatus({ kind: 'fail', msg: '붙여넣을 JSON을 입력하세요' })
       setTimeout(() => setApplyStatus({ kind: 'idle' }), 3000)
       return
     }
     setApplyStatus({ kind: 'loading' })
-    const result = await window.api.applyDutyFiles({
-      peopleFilePath: peoplePath.trim(),
-      assignmentsFilePath: assignmentsPath.trim()
-    })
+    const result = await window.api.applyDutyApi(
+      importMode === 'url'
+        ? { mode: 'url', url: apiUrl.trim() }
+        : { mode: 'paste', payload: pasteText }
+    )
     if (result.success) {
+      const monthLabel = result.month ? ` · ${result.month}` : ''
       setApplyStatus({
         kind: 'success',
-        msg: `사람 ${result.peopleCount}명 · 배정 ${result.assignmentsCount}일 반영됨`
+        msg: `사람 ${result.peopleCount}명 · 배정 ${result.assignmentsCount}일 반영됨${monthLabel}`
       })
     } else {
       setApplyStatus({ kind: 'fail', msg: result.error ?? '실패' })
@@ -460,81 +460,74 @@ export default function DutyTab({ duty, onSave }: DutyTabProps) {
             </button>
 
             <div className="duty-file-sync">
-              <div className="duty-file-sync-title">파일에서 가져오기</div>
-              <div className="duty-file-row">
-                <div className="duty-file-label">
-                  <span className="duty-file-help-wrap">
-                    <button
-                      type="button"
-                      className="duty-file-help"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        setOpenHelp((v) => v === 'people' ? null : 'people')
-                      }}
-                    >
-                      ⓘ
-                      <span className="duty-file-help-tip">예시 보기</span>
-                    </button>
-                    {openHelp === 'people' && (
-                      <div className="duty-file-help-popover">
-                        <div className="duty-file-help-title">
-                          JSON 형식
-                          <button type="button" className="duty-file-help-close" onClick={() => setOpenHelp(null)}>×</button>
-                        </div>
-                        <pre className="duty-schema-code">{PEOPLE_SCHEMA_EXAMPLE}</pre>
+              <div className="duty-file-sync-title">
+                API에서 가져오기
+                <span className="duty-file-help-wrap">
+                  <button
+                    type="button"
+                    className="duty-file-help"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setShowHelp((v) => !v)
+                    }}
+                  >
+                    ⓘ
+                    <span className="duty-file-help-tip">응답 예시</span>
+                  </button>
+                  {showHelp && (
+                    <div className="duty-file-help-popover">
+                      <div className="duty-file-help-title">
+                        응답/붙여넣기 JSON 형식
+                        <button type="button" className="duty-file-help-close" onClick={() => setShowHelp(false)}>×</button>
                       </div>
-                    )}
-                  </span>
-                  사람 파일
-                </div>
-                <input
-                  type="text"
-                  placeholder="/.../people.json"
-                  value={peoplePath}
-                  onChange={(e) => setPeoplePath(e.target.value)}
-                />
-                <button onClick={() => pickFile('people')} className="duty-file-pick">찾기</button>
+                      <pre className="duty-schema-code">{API_SCHEMA_EXAMPLE}</pre>
+                    </div>
+                  )}
+                </span>
               </div>
-              <div className="duty-file-row">
-                <div className="duty-file-label">
-                  <span className="duty-file-help-wrap">
-                    <button
-                      type="button"
-                      className="duty-file-help"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        setOpenHelp((v) => v === 'assignments' ? null : 'assignments')
-                      }}
-                    >
-                      ⓘ
-                      <span className="duty-file-help-tip">예시 보기</span>
-                    </button>
-                    {openHelp === 'assignments' && (
-                      <div className="duty-file-help-popover">
-                        <div className="duty-file-help-title">
-                          JSON 형식
-                          <button type="button" className="duty-file-help-close" onClick={() => setOpenHelp(null)}>×</button>
-                        </div>
-                        <pre className="duty-schema-code">{ASSIGNMENTS_SCHEMA_EXAMPLE}</pre>
-                      </div>
-                    )}
-                  </span>
-                  월별 배정
-                </div>
-                <input
-                  type="text"
-                  placeholder="/.../assignments/2026-05.json"
-                  value={assignmentsPath}
-                  onChange={(e) => setAssignmentsPath(e.target.value)}
-                />
-                <button onClick={() => pickFile('assignments')} className="duty-file-pick">찾기</button>
+              <div className="duty-import-mode">
+                <button
+                  type="button"
+                  className={`duty-import-mode-btn${importMode === 'url' ? ' active' : ''}`}
+                  onClick={() => setImportMode('url')}
+                >URL 호출</button>
+                <button
+                  type="button"
+                  className={`duty-import-mode-btn${importMode === 'paste' ? ' active' : ''}`}
+                  onClick={() => setImportMode('paste')}
+                >JSON 붙여넣기</button>
               </div>
+              {importMode === 'url' ? (
+                <div className="duty-file-row">
+                  <div className="duty-file-label">API URL</div>
+                  <input
+                    type="text"
+                    placeholder="https:/duty-schedule.ax.com/api/duty"
+                    value={apiUrl}
+                    onChange={(e) => setApiUrl(e.target.value)}
+                  />
+                </div>
+              ) : (
+                <textarea
+                  className="duty-paste-area"
+                  value={pasteText}
+                  onChange={(e) => setPasteText(e.target.value)}
+                  rows={8}
+                  spellCheck={false}
+                />
+              )}
+              {duty.lastApiSyncAt && (
+                <div className="duty-last-sync">마지막 동기화: {new Date(duty.lastApiSyncAt).toLocaleString('ko-KR')}</div>
+              )}
               <button
                 className="duty-modal-btn duty-apply-btn"
                 onClick={handleApply}
-                disabled={applyStatus.kind === 'loading' || !peoplePath.trim() || !assignmentsPath.trim()}
+                disabled={
+                  applyStatus.kind === 'loading' ||
+                  (importMode === 'url' ? !apiUrl.trim() : !pasteText.trim())
+                }
               >
-                {applyStatus.kind === 'loading' ? '적용 중...' : '적용하기'}
+                {applyStatus.kind === 'loading' ? '가져오는 중...' : '가져오기'}
               </button>
               {applyStatus.msg && (
                 <div className={`duty-apply-status ${applyStatus.kind}`}>{applyStatus.msg}</div>
@@ -556,33 +549,19 @@ export default function DutyTab({ duty, onSave }: DutyTabProps) {
   )
 }
 
-const PEOPLE_SCHEMA_EXAMPLE = `[
-  {
-    "id": "p_hong_gildong",
-    "name": "홍길동",
-    "team": "backend",
-    "slackUserId": "U07ABC123",
-    "color": "hsl(212, 68%, 62%)"
-  },
-  {
-    "id": "p_kim_chulsoo",
-    "name": "김철수",
-    "team": "frontend",
-    "slackUserId": "",
-    "color": "hsl(28, 78%, 58%)"
-  }
-]`
-
-const ASSIGNMENTS_SCHEMA_EXAMPLE = `{
+const API_SCHEMA_EXAMPLE = `{
   "month": "2026-05",
-  "entries": [
+  "duties": [
     {
-      "date": "2026-05-12",
-      "personIds": ["p_hong_gildong"]
-    },
-    {
-      "date": "2026-05-13",
-      "personIds": ["p_hong_gildong", "p_kim_chulsoo"]
+      "date": "2026-05-20",
+      "assignees": [
+        { "memberId": 1, "name": "홍길동", "slackId": "U000AAA111", "team": "백엔드", "color": "#edcb45" },
+        { "memberId": 2, "name": "김철수", "slackId": "U000BBB222", "team": "프론트", "color": "#de73b7" }
+      ]
     }
+  ],
+  "members": [
+    { "id": 1, "name": "홍길동", "slackId": "U000AAA111", "team": "백엔드", "color": "#edcb45", "sortOrder": 1 },
+    { "id": 2, "name": "김철수", "slackId": "U000BBB222", "team": "프론트", "color": "#de73b7", "sortOrder": 2 }
   ]
 }`

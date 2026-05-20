@@ -2105,6 +2105,9 @@ input:focus, textarea:focus {
   font-size: 12px;
   color: #9ba2ad;
   margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .duty-file-row {
@@ -2248,19 +2251,57 @@ input:focus, textarea:focus {
   border-radius: 4px;
 }
 
-.duty-file-pick {
-  padding: 5px 10px;
+.duty-import-mode {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 8px;
+  background: #0f1626;
+  border: 1px solid #2a2f3a;
+  border-radius: 6px;
+  padding: 3px;
+}
+
+.duty-import-mode-btn {
+  flex: 1;
+  padding: 5px 8px;
   font-size: 12px;
   background: transparent;
   color: #9ba2ad;
-  border: 1px solid #2a2f3a;
+  border: none;
   border-radius: 4px;
   cursor: pointer;
+  transition: background 0.12s, color 0.12s;
 }
 
-.duty-file-pick:hover {
-  border-color: #4a5568;
+.duty-import-mode-btn:hover {
   color: #e0e0e0;
+}
+
+.duty-import-mode-btn.active {
+  background: #2a2f3a;
+  color: #e0e0e0;
+}
+
+.duty-paste-area {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 6px 8px;
+  font-size: 11px;
+  font-family: 'SF Mono', Menlo, Monaco, monospace;
+  background: #1a1d24;
+  border: 1px solid #2a2f3a;
+  color: #e0e0e0;
+  border-radius: 4px;
+  resize: vertical;
+  margin-bottom: 6px;
+}
+
+.duty-last-sync {
+  font-size: 11px;
+  color: #6e7480;
+  margin-bottom: 6px;
+  text-align: right;
 }
 
 .duty-apply-btn {

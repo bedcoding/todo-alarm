@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, Menu, Notification, Tray, nativeImage, screen, net, powerMonitor, dialog } from 'electron'
+import { app, BrowserWindow, ipcMain, Menu, Notification, Tray, nativeImage, screen, net, powerMonitor } from 'electron'
 import path from 'path'
 import fs from 'fs'
 import type { AppData, Schedule, Memo, Settings, AwayCheckSettings, TrashItem, DutySettings, SlackMethod } from '../types'
@@ -9,6 +9,10 @@ let dataPath: string
 function readData(): AppData {
   try {
     const raw = JSON.parse(fs.readFileSync(dataPath, 'utf-8'))
+    const rawDuty = (raw.duty ?? {}) as Record<string, unknown>
+    // 구버전에 남아있던 파일 경로 필드는 제거
+    delete rawDuty.peopleFilePath
+    delete rawDuty.assignmentsFilePath
     return {
       schedules: raw.schedules ?? [],
       memos: raw.memos ?? [],
@@ -16,7 +20,7 @@ function readData(): AppData {
       awayCheck: { ...DEFAULT_AWAY_CHECK, ...raw.awayCheck },
       morningAlertSentDate: raw.morningAlertSentDate,
       trash: raw.trash ?? [],
-      duty: { ...DEFAULT_DUTY, ...raw.duty }
+      duty: { ...DEFAULT_DUTY, ...rawDuty }
     }
   } catch {
     return {
@@ -866,33 +870,29 @@ ipcMain.handle('reset-duty-last-sent', () => {
   return true
 })
 
-ipcMain.handle('pick-duty-file', async (_, kind: 'people' | 'assignments') => {
-  const title = kind === 'people' ? '사람 파일 선택 (people.json)' : '월별 배정 파일 선택 (YYYY-MM.json)'
-  const result = await dialog.showOpenDialog({
-    title,
-    properties: ['openFile'],
-    filters: [{ name: 'JSON', extensions: ['json'] }]
-  })
-  if (result.canceled || result.filePaths.length === 0) {
-    return { canceled: true }
-  }
-  return { canceled: false, path: result.filePaths[0] }
-})
-
-interface RosterPerson {
-  id: string
+interface DutyApiMember {
+  id: number
   name: string
+  slackId?: string
   team?: string
-  slackUserId?: string
+  color?: string
+  sortOrder?: number
+}
+interface DutyApiAssignee {
+  memberId: number
+  name?: string
+  slackId?: string
+  team?: string
   color?: string
 }
-interface RosterAssignmentEntry {
+interface DutyApiDay {
   date: string
-  personIds: string[]
+  assignees: DutyApiAssignee[]
 }
-interface RosterMonthly {
+interface DutyApiResponse {
   month?: string
-  entries?: RosterAssignmentEntry[]
+  duties?: DutyApiDay[]
+  members?: DutyApiMember[]
 }
 
 function randomDutyColor(): string {
@@ -902,59 +902,138 @@ function randomDutyColor(): string {
   return `hsl(${hue}, ${saturation}%, ${lightness}%)`
 }
 
-ipcMain.handle('apply-duty-files', async (_, paths: { peopleFilePath: string; assignmentsFilePath: string }) => {
-  try {
-    if (!paths.peopleFilePath || !paths.assignmentsFilePath) {
-      return { success: false, error: '두 파일 경로를 모두 입력하세요.' }
-    }
-    const [peopleRaw, assignmentsRaw] = await Promise.all([
-      fs.promises.readFile(paths.peopleFilePath, 'utf-8'),
-      fs.promises.readFile(paths.assignmentsFilePath, 'utf-8')
-    ])
-    const rosterPeople = JSON.parse(peopleRaw) as RosterPerson[]
-    const rosterMonth = JSON.parse(assignmentsRaw) as RosterMonthly
-    if (!Array.isArray(rosterPeople)) {
-      return { success: false, error: 'people 파일이 배열 형식이 아닙니다.' }
-    }
-    if (!rosterMonth.entries || !Array.isArray(rosterMonth.entries)) {
-      return { success: false, error: 'assignments 파일에 entries 배열이 없습니다.' }
-    }
-
-    const data = readData()
-    const existingById = new Map(data.duty.people.map((p) => [p.id, p]))
-
-    const people = rosterPeople.map((rp) => {
-      const existing = existingById.get(rp.id)
-      return {
-        id: rp.id,
-        name: rp.name,
-        slackUserId: rp.slackUserId ?? existing?.slackUserId ?? '',
-        color: existing?.color ?? rp.color ?? randomDutyColor()
-      }
-    })
-
-    const validIds = new Set(people.map((p) => p.id))
-    const assignments = rosterMonth.entries
-      .filter((e) => Array.isArray(e.personIds) && e.personIds.length > 0)
-      .map((e, idx) => ({
-        id: `a_${e.date}_${idx}`,
-        date: e.date,
-        personIds: e.personIds.filter((pid) => validIds.has(pid))
-      }))
-      .filter((e) => e.personIds.length > 0)
-
-    data.duty = {
-      ...data.duty,
-      people,
-      assignments,
-      peopleFilePath: paths.peopleFilePath,
-      assignmentsFilePath: paths.assignmentsFilePath
-    }
-    writeData(data)
-    sendToAllWindows('duty-updated', data.duty)
-    scheduleDutyAlert()
-    return { success: true, peopleCount: people.length, assignmentsCount: assignments.length }
-  } catch (e) {
-    return { success: false, error: e instanceof Error ? e.message : '파일 읽기 실패' }
+function applyDutyRoster(payload: DutyApiResponse, opts: { apiUrl?: string }): {
+  success: boolean
+  error?: string
+  peopleCount?: number
+  assignmentsCount?: number
+  month?: string
+  syncedAt?: string
+} {
+  if (!payload || typeof payload !== 'object') {
+    return { success: false, error: '응답 형식이 올바르지 않습니다.' }
   }
-})
+  if (!Array.isArray(payload.duties)) {
+    return { success: false, error: 'duties 배열이 없습니다.' }
+  }
+
+  const memberMap = new Map<number, DutyApiMember>()
+  if (Array.isArray(payload.members)) {
+    for (const m of payload.members) {
+      if (typeof m?.id === 'number') memberMap.set(m.id, m)
+    }
+  }
+  for (const day of payload.duties) {
+    if (!Array.isArray(day?.assignees)) continue
+    for (const a of day.assignees) {
+      if (typeof a?.memberId === 'number' && !memberMap.has(a.memberId)) {
+        memberMap.set(a.memberId, {
+          id: a.memberId,
+          name: a.name ?? `member_${a.memberId}`,
+          slackId: a.slackId,
+          team: a.team,
+          color: a.color
+        })
+      }
+    }
+  }
+
+  if (memberMap.size === 0) {
+    return { success: false, error: '멤버 정보가 없습니다.' }
+  }
+
+  const data = readData()
+  const existingById = new Map(data.duty.people.map((p) => [p.id, p]))
+
+  const sorted = [...memberMap.values()].sort((a, b) => {
+    const sa = a.sortOrder ?? Number.MAX_SAFE_INTEGER
+    const sb = b.sortOrder ?? Number.MAX_SAFE_INTEGER
+    if (sa !== sb) return sa - sb
+    return a.id - b.id
+  })
+
+  const people = sorted.map((m) => {
+    const id = `p_${m.id}`
+    const existing = existingById.get(id)
+    return {
+      id,
+      name: m.name,
+      slackUserId: m.slackId ?? existing?.slackUserId ?? '',
+      color: existing?.color ?? m.color ?? randomDutyColor()
+    }
+  })
+
+  const validIds = new Set(people.map((p) => p.id))
+  const assignments = payload.duties
+    .filter((d) => typeof d?.date === 'string' && Array.isArray(d.assignees) && d.assignees.length > 0)
+    .map((d, idx) => ({
+      id: `a_${d.date}_${idx}`,
+      date: d.date,
+      personIds: d.assignees
+        .map((a) => `p_${a.memberId}`)
+        .filter((pid) => validIds.has(pid))
+    }))
+    .filter((e) => e.personIds.length > 0)
+
+  const syncedAt = new Date().toISOString()
+  data.duty = {
+    ...data.duty,
+    people,
+    assignments,
+    apiUrl: opts.apiUrl ?? data.duty.apiUrl,
+    lastApiSyncAt: syncedAt
+  }
+  writeData(data)
+  sendToAllWindows('duty-updated', data.duty)
+  scheduleDutyAlert()
+  return {
+    success: true,
+    peopleCount: people.length,
+    assignmentsCount: assignments.length,
+    month: typeof payload.month === 'string' ? payload.month : undefined,
+    syncedAt
+  }
+}
+
+ipcMain.handle(
+  'apply-duty-api',
+  async (_, input: { mode: 'url'; url: string } | { mode: 'paste'; payload: string }) => {
+    try {
+      if (input?.mode === 'url') {
+        const url = (input.url ?? '').trim()
+        if (!url) return { success: false, error: 'URL을 입력하세요.' }
+        let parsed: URL
+        try {
+          parsed = new URL(url)
+        } catch {
+          return { success: false, error: '올바른 URL이 아닙니다.' }
+        }
+        if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
+          return { success: false, error: 'http(s) URL만 허용됩니다.' }
+        }
+        const response = await net.fetch(url, { method: 'GET' })
+        if (!response.ok) {
+          return { success: false, error: `HTTP ${response.status}` }
+        }
+        const json = (await response.json()) as DutyApiResponse
+        return applyDutyRoster(json, { apiUrl: url })
+      }
+
+      if (input?.mode === 'paste') {
+        const raw = (input.payload ?? '').trim()
+        if (!raw) return { success: false, error: '붙여넣을 JSON이 비어 있습니다.' }
+        let json: DutyApiResponse
+        try {
+          json = JSON.parse(raw) as DutyApiResponse
+        } catch (e) {
+          return { success: false, error: `JSON 파싱 실패: ${e instanceof Error ? e.message : ''}` }
+        }
+        return applyDutyRoster(json, { apiUrl: undefined })
+      }
+
+      return { success: false, error: '알 수 없는 입력 모드입니다.' }
+    } catch (e) {
+      return { success: false, error: e instanceof Error ? e.message : '가져오기 실패' }
+    }
+  }
+)

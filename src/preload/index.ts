@@ -37,8 +37,7 @@ contextBridge.exposeInMainWorld('api', {
     ipcRenderer.on('duty-updated', (_, duty) => callback(duty))
   },
   testDutySlack: (config: unknown) => ipcRenderer.invoke('test-duty-slack', config),
-  pickFile: (kind: 'people' | 'assignments') => ipcRenderer.invoke('pick-duty-file', kind),
-  applyDutyFiles: (paths: { peopleFilePath: string; assignmentsFilePath: string }) =>
-    ipcRenderer.invoke('apply-duty-files', paths),
+  applyDutyApi: (input: { mode: 'url'; url: string } | { mode: 'paste'; payload: string }) =>
+    ipcRenderer.invoke('apply-duty-api', input),
   resetDutyLastSent: () => ipcRenderer.invoke('reset-duty-last-sent')
 })
