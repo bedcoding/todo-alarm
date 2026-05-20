@@ -82,10 +82,6 @@ export default function DutyTab({ duty, onSave }: DutyTabProps) {
   const [viewYear, setViewYear] = useState(today.getFullYear())
   const [viewMonth, setViewMonth] = useState(today.getMonth())
 
-  const slackConfigured = duty.slackMethod === 'webhook'
-    ? duty.slackWebhookUrl.trim().length > 0
-    : duty.slackBotToken.trim().length > 0 && duty.slackChannelId.trim().length > 0
-
   const handleApply = async () => {
     if (importMode === 'url' && !apiUrl.trim()) {
       setApplyStatus({ kind: 'fail', msg: 'API URL을 입력하세요' })
@@ -116,14 +112,8 @@ export default function DutyTab({ duty, onSave }: DutyTabProps) {
   }
 
   const handleTest = async () => {
-    if (!slackConfigured) return
     setTestStatus('loading')
-    const result = await window.api.testDutySlack({
-      method: duty.slackMethod,
-      webhookUrl: duty.slackWebhookUrl,
-      botToken: duty.slackBotToken,
-      channelId: duty.slackChannelId
-    })
+    const result = await window.api.testDutyDispatch()
     setTestStatus(result.success ? 'success' : 'fail')
     setTimeout(() => setTestStatus('idle'), 3000)
   }
@@ -447,17 +437,6 @@ export default function DutyTab({ duty, onSave }: DutyTabProps) {
               />
             </div>
             <div className="duty-alert-status">{renderDutyAlertStatus(duty, () => window.api.resetDutyLastSent())}</div>
-            <button
-              className="test-notification-btn duty-modal-btn"
-              onClick={handleTest}
-              disabled={!slackConfigured || testStatus === 'loading'}
-              title={slackConfigured ? '오늘/내일 당직자로 슬랙에 즉시 발송' : '슬랙 탭에서 당직 알림용 webhook을 먼저 설정하세요'}
-            >
-              {testStatus === 'loading' && '전송 중...'}
-              {testStatus === 'success' && '전송 성공!'}
-              {testStatus === 'fail' && '전송 실패'}
-              {testStatus === 'idle' && '지금 테스트 발송'}
-            </button>
 
             <div className="duty-file-sync">
               <div className="duty-import-mode">
@@ -527,6 +506,20 @@ export default function DutyTab({ duty, onSave }: DutyTabProps) {
               disabled={duty.people.length === 0 && duty.assignments.length === 0}
             >
               당직자/배정 전체 삭제
+            </button>
+            <button
+              className="test-notification-btn duty-modal-btn"
+              onClick={handleTest}
+              disabled={testStatus === 'loading'}
+              title={
+                duty.slackEnabled
+                  ? '오늘/내일 당직자로 mac 알림 + 슬랙 즉시 발송'
+                  : 'mac 알림으로 즉시 발송 (슬랙은 꺼져 있음)'
+              }
+            >
+              {testStatus === 'success' && '알림 전송됨'}
+              {testStatus === 'fail' && '전송 실패'}
+              {(testStatus === 'idle' || testStatus === 'loading') && '알림 테스트'}
             </button>
             <button className="picker-close-btn duty-modal-btn" onClick={() => setShowSettings(false)}>닫기</button>
           </div>

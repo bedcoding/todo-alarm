@@ -152,6 +152,7 @@ export interface ElectronAPI {
   saveDuty: (duty: DutySettings) => Promise<boolean>
   onDutyUpdated: (callback: (duty: DutySettings) => void) => void
   testDutySlack: (config: { method: SlackMethod; webhookUrl: string; botToken: string; channelId: string }) => Promise<{ success: boolean; error?: string }>
+  testDutyDispatch: () => Promise<{ success: boolean; slackAttempted?: boolean; error?: string }>
   applyDutyApi: (
     input: { mode: 'url'; url: string } | { mode: 'paste'; payload: string }
   ) => Promise<{ success: boolean; error?: string; peopleCount?: number; assignmentsCount?: number; month?: string; syncedAt?: string }>

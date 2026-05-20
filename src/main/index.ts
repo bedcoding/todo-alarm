@@ -872,6 +872,32 @@ ipcMain.handle('test-duty-slack', async (_, config: { method: string; webhookUrl
   }
 })
 
+ipcMain.handle('test-duty-dispatch', () => {
+  try {
+    const data = readData()
+    const { duty } = data
+
+    const plainBody = buildDutyMessage(duty, 'plain') ?? '오늘/내일 등록된 당직자가 없습니다.'
+    new Notification({ title: '🔔 당직 알림 (테스트)', body: plainBody, sound: 'default' }).show()
+
+    // 슬랙은 fire-and-forget (응답 기다리지 않음) — 일정/이석 테스트와 동일한 패턴
+    if (duty.slackEnabled) {
+      const slackMessage = buildDutyMessage(duty, 'slack') ?? '🔔 *당직 알림 테스트*\n오늘/내일 등록된 당직자가 없습니다.'
+      sendSlackByConfig(
+        duty.slackMethod,
+        duty.slackWebhookUrl,
+        duty.slackBotToken,
+        duty.slackChannelId,
+        slackMessage
+      )
+    }
+
+    return { success: true, slackAttempted: duty.slackEnabled }
+  } catch (e) {
+    return { success: false, error: e instanceof Error ? e.message : '테스트 발송 실패' }
+  }
+})
+
 ipcMain.handle('reset-duty-last-sent', () => {
   const data = readData()
   data.duty.lastSentDate = ''

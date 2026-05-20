@@ -37,6 +37,7 @@ contextBridge.exposeInMainWorld('api', {
     ipcRenderer.on('duty-updated', (_, duty) => callback(duty))
   },
   testDutySlack: (config: unknown) => ipcRenderer.invoke('test-duty-slack', config),
+  testDutyDispatch: () => ipcRenderer.invoke('test-duty-dispatch'),
   applyDutyApi: (input: { mode: 'url'; url: string } | { mode: 'paste'; payload: string }) =>
     ipcRenderer.invoke('apply-duty-api', input),
   resetDutyLastSent: () => ipcRenderer.invoke('reset-duty-last-sent')
