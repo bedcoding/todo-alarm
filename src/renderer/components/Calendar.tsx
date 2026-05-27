@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type ReactElement } from 'react'
 
 interface CalendarProps {
   scheduleDates: string[]
@@ -21,7 +21,7 @@ export default function Calendar({ scheduleDates, selectedDate, onSelectDate }: 
   const today = new Date()
   const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
 
-  const days: JSX.Element[] = []
+  const days: ReactElement[] = []
   for (let i = 0; i < firstDay; i++) {
     days.push(<div key={`empty-${i}`} className="calendar-day empty" />)
   }

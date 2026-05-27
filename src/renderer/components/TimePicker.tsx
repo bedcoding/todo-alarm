@@ -18,7 +18,7 @@ function ScrollColumn({ items, selected, onSelect }: {
 }) {
   const ref = useRef<HTMLDivElement>(null)
   const programmatic = useRef(false)
-  const scrollTimer = useRef<ReturnType<typeof setTimeout>>()
+  const scrollTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const mounted = useRef(false)
 
   const scrollToIndex = useCallback((idx: number, smooth: boolean) => {
