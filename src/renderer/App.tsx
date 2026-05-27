@@ -6,7 +6,7 @@ import SettingsTab from './components/SettingsTab'
 import TrashTab from './components/TrashTab'
 import DutyTab from './components/DutyTab'
 import type { Schedule, Memo, Settings, AwayCheckSettings, TrashItem, DutySettings } from '../types'
-import { DEFAULT_SETTINGS, DEFAULT_AWAY_CHECK, DEFAULT_DUTY } from '../types'
+import { DEFAULT_SETTINGS, DEFAULT_AWAY_CHECK, DEFAULT_DUTY, makeId } from '../types'
 
 const isPopup = window.location.hash === '#popup'
 
@@ -81,7 +81,7 @@ export default function App() {
     const target = schedules.find((s) => s.id === id)
     if (!target) return
     const newSchedules = schedules.filter((s) => s.id !== id)
-    const trashItem: TrashItem = { id: Date.now(), type: 'schedule', data: target, deletedAt: new Date().toISOString() }
+    const trashItem: TrashItem = { id: makeId(), type: 'schedule', data: target, deletedAt: new Date().toISOString() }
     const newTrash = [...trash, trashItem]
     await saveSchedules(newSchedules)
     await saveTrash(newTrash)
@@ -95,7 +95,7 @@ export default function App() {
     const target = memos.find((m) => m.id === id)
     if (!target) return
     const newMemos = memos.filter((m) => m.id !== id)
-    const trashItem: TrashItem = { id: Date.now(), type: 'memo', data: target, deletedAt: new Date().toISOString() }
+    const trashItem: TrashItem = { id: makeId(), type: 'memo', data: target, deletedAt: new Date().toISOString() }
     const newTrash = [...trash, trashItem]
     await saveMemos(newMemos)
     await saveTrash(newTrash)

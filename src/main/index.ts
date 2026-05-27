@@ -53,6 +53,9 @@ let awayAlertSent = false
 let morningAlertSentDate = ''
 let lastBlurTime = 0
 let popupPinned = false
+// 이석 체커 폴링(5초마다)에서 디스크 read 회피용 캐시. save handler에서 갱신
+let cachedAwayCheck: AwayCheckSettings = { ...DEFAULT_AWAY_CHECK }
+let cachedSettings: Settings = { ...DEFAULT_SETTINGS }
 
 function getRendererURL(hash = ''): string | null {
   if (process.env['ELECTRON_RENDERER_URL']) {
@@ -254,6 +257,14 @@ function sendSlackNotification(settings: Settings, message: string): Promise<boo
 function sendScheduleNotification(schedule: Schedule, missed: boolean, settings: Settings): void {
   if (!settings.scheduleEnabled) return
 
+  // 진입 가드 + 마킹을 발송 "전"에 처리해서 동시 catch-up 경로의 이중 발송 차단
+  const data = readData()
+  const target = data.schedules.find((s) => s.id === schedule.id)
+  if (!target || target.notified) return
+  target.notified = true
+  writeData(data)
+  sendToAllWindows('schedules-updated', data.schedules)
+
   const timingText = settings.alertTiming > 0 ? ` (${settings.alertTiming}분 전)` : ''
   const title = missed ? `📌 놓친 알림` : `📌 일정 알림${timingText}`
 
@@ -269,14 +280,6 @@ function sendScheduleNotification(schedule: Schedule, missed: boolean, settings:
       settings,
       `${prefix}\n📅 ${schedule.date} ${schedule.time}\n${schedule.content}`
     )
-  }
-
-  const data = readData()
-  const target = data.schedules.find((s) => s.id === schedule.id)
-  if (target) {
-    target.notified = true
-    writeData(data)
-    sendToAllWindows('schedules-updated', data.schedules)
   }
 }
 
@@ -617,19 +620,17 @@ function restartAlarmChecker(): void {
 
 function startAwayChecker(): void {
   stopAwayChecker()
-  const data = readData()
-  if (!data.awayCheck.enabled) return
+  if (!cachedAwayCheck.enabled) return
 
   awayCheckIntervalId = setInterval(() => {
-    const current = readData()
-    if (!current.awayCheck.enabled) return
+    if (!cachedAwayCheck.enabled) return
 
     const idleSeconds = powerMonitor.getSystemIdleTime()
 
     // 제외 시간대 체크
     const now = new Date()
     const currentMinutes = now.getHours() * 60 + now.getMinutes()
-    const { excludeBeforeWork, beforeWorkTime, excludeLunch, lunchStart, lunchEnd, excludeAfterWork, afterWorkTime, excludeDays } = current.awayCheck
+    const { excludeBeforeWork, beforeWorkTime, excludeLunch, lunchStart, lunchEnd, excludeAfterWork, afterWorkTime, excludeDays } = cachedAwayCheck
     let excluded = false
 
     if (excludeDays.length > 0 && excludeDays.includes(now.getDay())) {
@@ -656,27 +657,27 @@ function startAwayChecker(): void {
     }
 
     // UI에 현재 상태 전송
-    sendToAllWindows('idle-status', { idleSeconds, limitSeconds: current.awayCheck.limitMinutes * 60, excluded })
+    sendToAllWindows('idle-status', { idleSeconds, limitSeconds: cachedAwayCheck.limitMinutes * 60, excluded })
 
     if (excluded) {
       awayAlertSent = false
       return
     }
 
-    if (idleSeconds >= current.awayCheck.limitMinutes * 60) {
+    if (idleSeconds >= cachedAwayCheck.limitMinutes * 60) {
       if (!awayAlertSent) {
         awayAlertSent = true
 
         new Notification({
           title: '⚠️ 이석 경고!',
-          body: `${current.awayCheck.limitMinutes}분 이상 자리를 비웠습니다!`,
+          body: `${cachedAwayCheck.limitMinutes}분 이상 자리를 비웠습니다!`,
           sound: 'default'
         }).show()
 
-        if (current.settings.slackEnabled) {
+        if (cachedSettings.slackEnabled) {
           sendSlackNotification(
-            current.settings,
-            `⚠️ *이석 경고!* ${current.awayCheck.limitMinutes}분 이상 자리를 비웠습니다!`
+            cachedSettings,
+            `⚠️ *이석 경고!* ${cachedAwayCheck.limitMinutes}분 이상 자리를 비웠습니다!`
           )
         }
       }
@@ -700,7 +701,10 @@ if (process.platform === 'darwin') {
 
 app.whenReady().then(() => {
   dataPath = path.join(app.getPath('userData'), 'data.json')
-  morningAlertSentDate = readData().morningAlertSentDate || ''
+  const initial = readData()
+  morningAlertSentDate = initial.morningAlertSentDate || ''
+  cachedAwayCheck = initial.awayCheck
+  cachedSettings = initial.settings
   cleanupTrash()
   createTray()
   createPopupWindow()
@@ -747,6 +751,7 @@ ipcMain.handle('save-settings', (_, settings: Settings) => {
   const data = readData()
   data.settings = settings
   writeData(data)
+  cachedSettings = settings
   return true
 })
 
@@ -755,6 +760,7 @@ ipcMain.handle('save-away-check', (_, awayCheck: AwayCheckSettings) => {
   const data = readData()
   data.awayCheck = awayCheck
   writeData(data)
+  cachedAwayCheck = awayCheck
   sendToAllWindows('away-check-updated', awayCheck)
   startAwayChecker()
   return true

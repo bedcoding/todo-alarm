@@ -1,4 +1,4 @@
-import { useState, useEffect, type ReactNode } from 'react'
+import { useState, useEffect, useRef, type ReactNode } from 'react'
 import type { DutySettings, DutyPerson } from '../../types'
 import ConfirmDialog from './ConfirmDialog'
 
@@ -76,8 +76,19 @@ export default function DutyTab({ duty, onSave }: DutyTabProps) {
 
   const peoplePoolCollapsed = duty.peoplePoolCollapsed
   const togglePeoplePool = () => onSave({ ...duty, peoplePoolCollapsed: !duty.peoplePoolCollapsed })
-  const apiUrl = duty.apiUrl
-  const setApiUrl = (v: string) => onSave({ ...duty, apiUrl: v })
+  const [apiUrlDraft, setApiUrlDraft] = useState(duty.apiUrl)
+  const apiUrlDebounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  useEffect(() => {
+    setApiUrlDraft(duty.apiUrl)
+  }, [duty.apiUrl])
+  const setApiUrl = (v: string) => {
+    setApiUrlDraft(v)
+    clearTimeout(apiUrlDebounceRef.current)
+    apiUrlDebounceRef.current = setTimeout(() => {
+      onSave({ ...duty, apiUrl: v })
+    }, 500)
+  }
+  const apiUrl = apiUrlDraft
   const today = new Date()
   const [viewYear, setViewYear] = useState(today.getFullYear())
   const [viewMonth, setViewMonth] = useState(today.getMonth())

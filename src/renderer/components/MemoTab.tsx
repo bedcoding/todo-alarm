@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import EmptyBell from './EmptyBell'
 import type { Memo } from '../../types'
+import { makeId } from '../../types'
 
 interface MemoTabProps {
   memos: Memo[]
@@ -29,12 +30,12 @@ export default function MemoTab({ memos, onSave, onDelete }: MemoTabProps) {
     const obs = new ResizeObserver(checkScrollBottom)
     obs.observe(el)
     return () => obs.disconnect()
-  }, [checkScrollBottom, memos])
+  }, [checkScrollBottom])
 
   const addMemo = () => {
     if (!content.trim()) return
     const newMemo: Memo = {
-      id: Date.now(),
+      id: makeId(),
       content: content.trim(),
       createdAt: new Date().toISOString()
     }

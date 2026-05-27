@@ -3,6 +3,7 @@ import Calendar from './Calendar'
 import EmptyBell from './EmptyBell'
 import TimePicker from './TimePicker'
 import type { Schedule, Settings } from '../../types'
+import { makeId } from '../../types'
 
 function getToday(): string {
   const d = new Date()
@@ -12,14 +13,6 @@ function getToday(): string {
 function getNowHour(): string {
   const d = new Date()
   return `${String(d.getHours()).padStart(2, '0')}:00`
-}
-
-function getSavedDate(): string {
-  try {
-    const saved = localStorage.getItem('schedule-last-date')
-    if (saved === getToday()) return saved
-  } catch {}
-  return getToday()
 }
 
 interface ScheduleTabProps {
@@ -32,7 +25,7 @@ interface ScheduleTabProps {
 }
 
 export default function ScheduleTab({ schedules, onSave, onDelete, settings, onSettingsChange, isPopup }: ScheduleTabProps) {
-  const [date, setDate] = useState(getSavedDate)
+  const [date, setDate] = useState(getToday)
   const [time, setTime] = useState(getNowHour)
   const [content, setContent] = useState('')
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
@@ -48,10 +41,6 @@ export default function ScheduleTab({ schedules, onSave, onDelete, settings, onS
   const [listAtBottom, setListAtBottom] = useState(false)
   const listRef = useRef<HTMLDivElement>(null)
 
-  useEffect(() => {
-    localStorage.setItem('schedule-last-date', getToday())
-  }, [])
-
   const checkScrollBottom = useCallback(() => {
     const el = listRef.current
     if (!el) return
@@ -66,14 +55,14 @@ export default function ScheduleTab({ schedules, onSave, onDelete, settings, onS
     const obs = new ResizeObserver(checkScrollBottom)
     obs.observe(el)
     return () => obs.disconnect()
-  }, [checkScrollBottom, schedules])
+  }, [checkScrollBottom])
 
   const addSchedule = () => {
     if (!date || !time || !content.trim()) return
 
     const datetime = new Date(`${date}T${time}`)
     const newSchedule: Schedule = {
-      id: Date.now(),
+      id: makeId(),
       date,
       time,
       content: content.trim(),

@@ -1,3 +1,8 @@
+// 같은 ms에 ID를 두 번 만들어도 충돌 안 나도록 하위 1000자리에 난수 섞음
+export function makeId(): number {
+  return Date.now() * 1000 + Math.floor(Math.random() * 1000)
+}
+
 export interface Schedule {
   id: number
   date: string
