@@ -78,6 +78,10 @@ export default function ScheduleTab({ schedules, onSave, onDelete, settings, onS
     onDelete(id)
   }
 
+  const resendNotification = (id: number) => {
+    onSave(schedules.map((s) => s.id === id ? { ...s, notified: false } : s))
+  }
+
   const startEdit = (s: Schedule) => {
     setEditingSchedule(s)
     setEditDate(s.date)
@@ -205,6 +209,15 @@ export default function ScheduleTab({ schedules, onSave, onDelete, settings, onS
                   <div className="schedule-info">
                     <span className="schedule-date">{formatDisplayDate(s.date)}</span>
                     <span className="schedule-time">{formatTime(s.time)}</span>
+                    {s.notified && !isPast(s.datetime) && (
+                      <button
+                        className="resend-btn"
+                        onClick={() => resendNotification(s.id)}
+                        data-tooltip="알림 다시 받기"
+                      >
+                        🔔
+                      </button>
+                    )}
                     <span className="schedule-content-wrap">
                       <span className="schedule-content">{s.content}</span>
                       <span className="schedule-content-tooltip">{s.content}</span>
