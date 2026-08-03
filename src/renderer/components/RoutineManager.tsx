@@ -77,17 +77,22 @@ const todayStr = (() => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 })()
 
-/** 규칙을 한 줄 요약 — 목록에서 바로 읽히도록 */
-function describeRule(r: RoutineRule): string {
+/** 언제 울리는지 — 1차 정보 */
+function describeSchedule(r: RoutineRule): string {
   if (r.freq === 'weekly') {
     const days = [...r.weekdays].sort().map((d) => WEEKDAY_LABELS[d]).join('·')
     return `매주 ${days} ${r.time}`
   }
   const day = r.monthDay === 'last' ? '말일' : `${r.monthDay}일`
-  if (r.holidayShift === 'none') return `매월 ${day} ${r.time}`
+  return `매월 ${day} ${r.time}`
+}
+
+/** 휴일에 걸렸을 때의 보정 — 조건부 2차 정보. 없으면 빈 문자열 */
+function describeShift(r: RoutineRule): string {
+  if (r.freq === 'weekly' || r.holidayShift === 'none') return ''
   const basis = r.holidayBasis === 'weekend' ? '주말' : '주말·공휴일'
   const dir = r.holidayShift === 'next' ? '다음' : '이전'
-  return `매월 ${day} ${r.time} · ${basis}이면 ${dir} 영업일`
+  return `${basis}이면 ${dir} 영업일로`
 }
 
 export default function RoutineManager({ routines, onSave, onClose }: RoutineManagerProps) {
@@ -203,7 +208,10 @@ export default function RoutineManager({ routines, onSave, onClose }: RoutineMan
                     </button>
                     <div className="routine-body" onClick={() => startEdit(r)}>
                       <div className="routine-content">{r.content}</div>
-                      <div className="routine-desc">{describeRule(r)}</div>
+                      <div className="routine-desc">{describeSchedule(r)}</div>
+                      {describeShift(r) && (
+                        <div className="routine-desc-shift">↳ {describeShift(r)}</div>
+                      )}
                     </div>
                     <button className="edit-btn" onClick={() => startEdit(r)}>
                       ✎

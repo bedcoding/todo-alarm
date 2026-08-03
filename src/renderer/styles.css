@@ -2898,6 +2898,13 @@ input:focus, textarea:focus {
   margin-top: 2px;
 }
 
+/* 휴일 보정은 조건부 2차 정보 — 한 단 낮춰 위계를 드러낸다 */
+.routine-desc-shift {
+  font-size: 10px;
+  color: #6a7286;
+  margin-top: 1px;
+}
+
 /* 공휴일 상태 표시 */
 .routine-holiday-box {
   padding: 8px 10px;
