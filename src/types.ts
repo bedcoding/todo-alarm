@@ -195,6 +195,10 @@ export interface AppData {
   duty: DutySettings
   routines: RoutineRule[]
   holidays?: HolidayCache
+  /** 사용자가 "이 버전 건너뛰기"를 누른 태그. 자동 확인에서만 존중한다 */
+  skippedVersion?: string
+  /** 마지막으로 업데이트를 확인한 시각. 재시작을 반복해도 주기를 지키게 하는 기준 */
+  lastUpdateCheckAt?: string
 }
 
 export interface ElectronAPI {

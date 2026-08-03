@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, Menu, Notification, Tray, nativeImage, screen, net, powerMonitor } from 'electron'
+import { app, BrowserWindow, ipcMain, Menu, Notification, Tray, nativeImage, screen, net, powerMonitor, dialog, shell } from 'electron'
 import path from 'path'
 import fs from 'fs'
 import type { AppData, Schedule, Memo, Settings, AwayCheckSettings, TrashItem, DutySettings, SlackMethod, RoutineRule, HolidayCache, HolidayEntry, HolidayShift, HolidayBasis } from '../types'
@@ -22,7 +22,9 @@ function readData(): AppData {
       trash: raw.trash ?? [],
       duty: { ...DEFAULT_DUTY, ...rawDuty },
       routines: (raw.routines ?? []).map(normalizeRoutine),
-      holidays: raw.holidays
+      holidays: raw.holidays,
+      skippedVersion: raw.skippedVersion,
+      lastUpdateCheckAt: raw.lastUpdateCheckAt
     }
   } catch {
     return {
@@ -231,7 +233,9 @@ function createTray(): void {
 
   const contextMenu = Menu.buildFromTemplate([
     { label: '열기', click: () => createMainWindow() },
+    { label: '업데이트 확인', click: () => void checkForUpdate(true) },
     { type: 'separator' },
+    { label: `버전 ${app.getVersion()}`, enabled: false },
     { label: '종료', click: () => app.quit() }
   ])
   tray.on('right-click', () => tray!.popUpContextMenu(contextMenu))
@@ -848,6 +852,131 @@ function scheduleRoutineMidnightTrigger(): void {
   }, next.getTime() - now.getTime())
 }
 
+/* ==================== 업데이트 확인 ==================== */
+
+const UPDATE_API = 'https://api.github.com/repos/bedcoding/todo-alarm/releases/latest'
+const RELEASES_PAGE = 'https://github.com/bedcoding/todo-alarm/releases/latest'
+// 실제 확인 주기. 급한 업데이트가 아니므로 주 1회면 충분하다
+const UPDATE_CHECK_INTERVAL = 7 * 24 * 60 * 60 * 1000
+// 주기가 됐는지 살피는 간격. 잠자기로 타이머가 밀려도 이 간격 안에 따라잡는다
+const UPDATE_TICK_INTERVAL = 6 * 60 * 60 * 1000
+// 기동 직후엔 네트워크가 아직 안 붙어 있을 수 있어 조금 기다렸다 확인한다
+const UPDATE_FIRST_CHECK_DELAY = 30000
+
+let updateCheckTimer: ReturnType<typeof setInterval> | null = null
+
+/** "v1.9.9" < "v1.11.0" — 문자열 비교로는 뒤집히므로 숫자로 자리마다 비교 */
+function compareVersions(a: string, b: string): number {
+  const pa = a.replace(/^v/, '').split('.').map((n) => parseInt(n, 10) || 0)
+  const pb = b.replace(/^v/, '').split('.').map((n) => parseInt(n, 10) || 0)
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    const diff = (pa[i] ?? 0) - (pb[i] ?? 0)
+    if (diff !== 0) return diff > 0 ? 1 : -1
+  }
+  return 0
+}
+
+function saveSkippedVersion(tag: string): void {
+  const data = readData()
+  data.skippedVersion = tag
+  writeData(data)
+}
+
+function saveLastUpdateCheck(): void {
+  const data = readData()
+  data.lastUpdateCheckAt = new Date().toISOString()
+  writeData(data)
+}
+
+/**
+ * @param manual 트레이 메뉴에서 직접 누른 경우.
+ *   자동 확인은 새 버전이 있을 때만 조용히 알리고, 수동 확인은 최신이어도 결과를 보여준다
+ *   (아무 반응이 없으면 버튼이 고장난 것처럼 보인다).
+ */
+async function checkForUpdate(manual = false): Promise<void> {
+  // 자동 확인은 주기가 돌아왔을 때만. 앱을 자주 껐다 켜도 주 1회를 넘기지 않는다
+  if (!manual) {
+    const last = readData().lastUpdateCheckAt
+    if (last) {
+      const elapsed = Date.now() - new Date(last).getTime()
+      if (!Number.isNaN(elapsed) && elapsed >= 0 && elapsed < UPDATE_CHECK_INTERVAL) return
+    }
+  }
+
+  let latestTag = ''
+  let pageUrl = RELEASES_PAGE
+  try {
+    const res = await net.fetch(UPDATE_API, { headers: { Accept: 'application/vnd.github+json' } })
+    if (res.ok) {
+      const json = (await res.json()) as { tag_name?: string; html_url?: string }
+      if (typeof json?.tag_name === 'string') {
+        latestTag = json.tag_name
+        if (typeof json.html_url === 'string') pageUrl = json.html_url
+      }
+    }
+  } catch {
+    // 오프라인이거나 API가 죽은 경우 — 자동 확인이라면 조용히 넘어간다
+  }
+
+  const current = app.getVersion()
+
+  if (!latestTag) {
+    if (manual) {
+      void dialog.showMessageBox({
+        type: 'warning',
+        title: '업데이트 확인',
+        message: '업데이트를 확인하지 못했습니다',
+        detail: '네트워크 상태를 확인한 뒤 다시 시도해 주세요.',
+        buttons: ['확인']
+      })
+    }
+    // 실패는 기록하지 않는다 — 다음 기회에 다시 시도해야 한다
+    return
+  }
+
+  // 여기까지 왔으면 서버 응답을 실제로 받은 것이므로 주기를 리셋한다
+  saveLastUpdateCheck()
+
+  if (compareVersions(latestTag, current) <= 0) {
+    if (manual) {
+      void dialog.showMessageBox({
+        type: 'info',
+        title: '업데이트 확인',
+        message: '최신 버전을 사용 중입니다',
+        detail: `현재 버전 ${current}`,
+        buttons: ['확인']
+      })
+    }
+    return
+  }
+
+  // 건너뛴 버전은 자동 확인에서만 무시한다. 직접 눌렀다면 보여주는 게 맞다
+  if (!manual && readData().skippedVersion === latestTag) return
+
+  const buttons = manual
+    ? ['다운로드 페이지 열기', '나중에']
+    : ['다운로드 페이지 열기', '나중에', '이 버전 건너뛰기']
+
+  const { response } = await dialog.showMessageBox({
+    type: 'info',
+    title: '업데이트 알림',
+    message: `새 버전 ${latestTag}이(가) 나왔습니다`,
+    detail: `현재 ${current} → 최신 ${latestTag.replace(/^v/, '')}`,
+    buttons,
+    defaultId: 0,
+    cancelId: 1
+  })
+
+  if (response === 0) shell.openExternal(pageUrl)
+  else if (response === 2) saveSkippedVersion(latestTag)
+}
+
+function startUpdateChecker(): void {
+  if (updateCheckTimer) clearInterval(updateCheckTimer)
+  setTimeout(() => void checkForUpdate(false), UPDATE_FIRST_CHECK_DELAY)
+  updateCheckTimer = setInterval(() => void checkForUpdate(false), UPDATE_TICK_INTERVAL)
+}
+
 function cleanupTrash(): void {
   trashTimers.forEach((t) => clearTimeout(t))
   trashTimers = []
@@ -1028,6 +1157,7 @@ app.whenReady().then(() => {
   startAwayChecker()
   scheduleDutyMidnightTrigger()
   scheduleRoutineMidnightTrigger()
+  startUpdateChecker()
 
   // 공휴일은 네트워크가 늦어도 앱 기동을 막지 않는다. 받아온 뒤 시프트를 다시 계산
   void ensureHolidays().then((r) => {

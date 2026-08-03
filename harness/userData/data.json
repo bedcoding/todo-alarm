@@ -1,0 +1,126 @@
+{
+  "schedules": [],
+  "memos": [],
+  "settings": {
+    "checkInterval": 43200000,
+    "scheduleEnabled": true,
+    "alertTiming": 0,
+    "morningAlertEnabled": false,
+    "morningAlertTime": "09:00",
+    "slackEnabled": false,
+    "slackMethod": "webhook",
+    "slackWebhookUrl": "",
+    "slackBotToken": "",
+    "slackChannelId": ""
+  },
+  "awayCheck": {
+    "enabled": false,
+    "limitMinutes": 20,
+    "excludeBeforeWork": true,
+    "beforeWorkTime": "09:00",
+    "excludeLunch": false,
+    "lunchStart": "12:00",
+    "lunchEnd": "13:00",
+    "excludeAfterWork": false,
+    "afterWorkTime": "18:00",
+    "excludeDays": [
+      0,
+      6
+    ]
+  },
+  "trash": [],
+  "duty": {
+    "enabled": false,
+    "alertTime": "09:00",
+    "people": [],
+    "assignments": [],
+    "slackEnabled": true,
+    "slackMethod": "webhook",
+    "slackWebhookUrl": "",
+    "slackBotToken": "",
+    "slackChannelId": "",
+    "apiUrl": "",
+    "peoplePoolCollapsed": false
+  },
+  "routines": [],
+  "holidays": {
+    "years": {
+      "2026": [
+        {
+          "date": "2026-01-01",
+          "name": "새해"
+        },
+        {
+          "date": "2026-02-16",
+          "name": "설날"
+        },
+        {
+          "date": "2026-02-17",
+          "name": "설날"
+        },
+        {
+          "date": "2026-02-18",
+          "name": "설날"
+        },
+        {
+          "date": "2026-03-02",
+          "name": "3·1절"
+        },
+        {
+          "date": "2026-05-01",
+          "name": "노동절"
+        },
+        {
+          "date": "2026-05-05",
+          "name": "어린이날"
+        },
+        {
+          "date": "2026-05-25",
+          "name": "부처님 오신 날"
+        },
+        {
+          "date": "2026-06-03",
+          "name": "지방 선거일"
+        },
+        {
+          "date": "2026-06-06",
+          "name": "현충일"
+        },
+        {
+          "date": "2026-07-17",
+          "name": "제헌절"
+        },
+        {
+          "date": "2026-08-17",
+          "name": "광복절"
+        },
+        {
+          "date": "2026-09-24",
+          "name": "추석"
+        },
+        {
+          "date": "2026-09-25",
+          "name": "추석"
+        },
+        {
+          "date": "2026-09-26",
+          "name": "추석"
+        },
+        {
+          "date": "2026-10-05",
+          "name": "개천절"
+        },
+        {
+          "date": "2026-10-09",
+          "name": "한글날"
+        },
+        {
+          "date": "2026-12-25",
+          "name": "크리스마스"
+        }
+      ]
+    },
+    "fetchedAt": "2026-08-03T05:05:29.835Z"
+  },
+  "lastUpdateCheckAt": "2026-08-03T05:05:29.392Z"
+}
