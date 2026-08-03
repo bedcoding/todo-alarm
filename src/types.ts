@@ -10,12 +10,75 @@ export interface Schedule {
   content: string
   datetime: string
   notified: boolean
+  // 반복 규칙에서 자동 생성된 일정일 때만 존재
+  routineId?: number
+  occurrenceKey?: string // `${routineId}:${시프트 전 기준일}` — 재전개 멱등키
+  detached?: boolean // 사용자가 개별 수정함 → 재전개 시 보존
 }
 
 export interface Memo {
   id: number
   content: string
   createdAt: string
+}
+
+/** 날짜 고정(매월 N일 / 말일) 또는 요일 고정(매주 O요일) */
+export type RoutineFreq = 'monthly' | 'weekly'
+
+/**
+ * 휴일(토·일 + 한국 공휴일)에 걸렸을 때의 처리.
+ * 'none' = 그날 그대로 발송 (월세처럼 날짜가 절대적인 것)
+ * 'next' = 다음 영업일로 밀기 (법인카드 정산처럼 업무일 기준인 것)
+ * 'prev' = 이전 영업일로 당기기 (마감이 그 날짜인 것)
+ */
+export type HolidayShift = 'none' | 'next' | 'prev'
+
+/**
+ * 무엇을 "휴일"로 볼지. 업종에 따라 평일 공휴일에도 출근하는 경우가 있어 규칙별로 고른다.
+ * 'weekend' = 토·일만
+ * 'publicHoliday' = 토·일 + 한국 법정공휴일
+ */
+export type HolidayBasis = 'weekend' | 'publicHoliday'
+
+export interface RoutineRule {
+  id: number
+  content: string
+  time: string // "10:00"
+  enabled: boolean
+  freq: RoutineFreq
+  monthDay: number | 'last' // freq='monthly'일 때 사용. 1~31 또는 말일
+  weekdays: number[] // freq='weekly'일 때 사용. 0=일 ~ 6=토
+  holidayShift: HolidayShift // freq='monthly'일 때만 유효
+  holidayBasis: HolidayBasis // holidayShift가 'none'이 아닐 때만 의미 있음
+  skippedKeys: string[] // 사용자가 개별 삭제한 발생분 (재전개 시 되살아나지 않도록)
+  createdAt: string
+}
+
+export function makeRoutine(): RoutineRule {
+  return {
+    id: makeId(),
+    content: '',
+    time: '10:00',
+    enabled: true,
+    freq: 'monthly',
+    monthDay: 1,
+    weekdays: [1],
+    holidayShift: 'none',
+    holidayBasis: 'publicHoliday',
+    skippedKeys: [],
+    createdAt: new Date().toISOString(),
+  }
+}
+
+export interface HolidayEntry {
+  date: string // "2026-08-17"
+  name: string // "광복절"
+}
+
+/** Nager.Date에서 받아온 연도별 한국 공휴일. 오프라인 대비 디스크 캐시 */
+export interface HolidayCache {
+  years: Record<string, HolidayEntry[]>
+  fetchedAt: string
 }
 
 export type SlackMethod = 'webhook' | 'bot'
@@ -130,6 +193,8 @@ export interface AppData {
   morningAlertSentDate?: string
   trash: TrashItem[]
   duty: DutySettings
+  routines: RoutineRule[]
+  holidays?: HolidayCache
 }
 
 export interface ElectronAPI {
@@ -162,6 +227,14 @@ export interface ElectronAPI {
     input: { mode: 'url'; url: string } | { mode: 'paste'; payload: string }
   ) => Promise<{ success: boolean; error?: string; peopleCount?: number; assignmentsCount?: number; month?: string; syncedAt?: string }>
   resetDutyLastSent: () => Promise<boolean>
+  getRoutines: () => Promise<RoutineRule[]>
+  saveRoutines: (routines: RoutineRule[]) => Promise<boolean>
+  onRoutinesUpdated: (callback: (routines: RoutineRule[]) => void) => void
+  skipOccurrence: (routineId: number, occurrenceKey: string) => Promise<boolean>
+  unskipOccurrence: (routineId: number, occurrenceKey: string) => Promise<boolean>
+  getHolidays: () => Promise<{ entries: HolidayEntry[]; fetchedAt?: string; offline: boolean }>
+  refreshHolidays: () => Promise<{ success: boolean; count?: number; error?: string }>
+  previewRoutine: (rule: RoutineRule) => Promise<{ date: string; shifted: boolean; reason?: string }[]>
 }
 
 declare global {

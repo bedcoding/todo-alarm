@@ -2,7 +2,8 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import Calendar from './Calendar'
 import EmptyBell from './EmptyBell'
 import TimePicker from './TimePicker'
-import type { Schedule, Settings } from '../../types'
+import RoutineManager from './RoutineManager'
+import type { Schedule, Settings, RoutineRule } from '../../types'
 import { makeId } from '../../types'
 
 function getToday(): string {
@@ -22,9 +23,11 @@ interface ScheduleTabProps {
   settings: Settings
   onSettingsChange: (patch: Partial<Settings>) => void
   isPopup: boolean
+  routines: RoutineRule[]
+  onRoutinesSave: (routines: RoutineRule[]) => void
 }
 
-export default function ScheduleTab({ schedules, onSave, onDelete, settings, onSettingsChange, isPopup }: ScheduleTabProps) {
+export default function ScheduleTab({ schedules, onSave, onDelete, settings, onSettingsChange, isPopup, routines, onRoutinesSave }: ScheduleTabProps) {
   const [date, setDate] = useState(getToday)
   const [time, setTime] = useState(getNowHour)
   const [content, setContent] = useState('')
@@ -33,6 +36,7 @@ export default function ScheduleTab({ schedules, onSave, onDelete, settings, onS
   const [showTimePicker, setShowTimePicker] = useState(false)
   const [showDatePicker, setShowDatePicker] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
+  const [showRoutines, setShowRoutines] = useState(false)
   const [notifTest, setNotifTest] = useState<'idle' | 'success' | 'denied'>('idle')
   const [editingSchedule, setEditingSchedule] = useState<Schedule | null>(null)
   const [editDate, setEditDate] = useState('')
@@ -98,7 +102,9 @@ export default function ScheduleTab({ schedules, onSave, onDelete, settings, onS
       time: editTime,
       content: editContent.trim(),
       datetime: datetime.toISOString(),
-      notified: false
+      notified: false,
+      // 반복에서 생성된 건이라면 개별 수정 표시 → 규칙이 바뀌어도 덮어쓰지 않는다
+      ...(s.routineId ? { detached: true } : {})
     } : s))
     setEditingSchedule(null)
   }
@@ -209,6 +215,14 @@ export default function ScheduleTab({ schedules, onSave, onDelete, settings, onS
                   <div className="schedule-info">
                     <span className="schedule-date">{formatDisplayDate(s.date)}</span>
                     <span className="schedule-time">{formatTime(s.time)}</span>
+                    {s.routineId && (
+                      <span
+                        className="routine-badge"
+                        data-tooltip={s.detached ? '반복 일정 (개별 수정됨)' : '반복 일정에서 자동 생성'}
+                      >
+                        🔁
+                      </span>
+                    )}
                     {s.notified && !isPast(s.datetime) && (
                       <button
                         className="resend-btn"
@@ -300,9 +314,25 @@ export default function ScheduleTab({ schedules, onSave, onDelete, settings, onS
         </>
       )}
 
-      <button className="inline-settings-toggle" onClick={() => setShowSettings(true)}>
-        알림 설정
-      </button>
+      <div className="inline-toggle-bar">
+        <button className="inline-toggle-item" onClick={() => setShowRoutines(true)}>
+          🔁 반복 일정
+          {routines.filter((r) => r.enabled).length > 0 && (
+            <span className="routine-count">{routines.filter((r) => r.enabled).length}</span>
+          )}
+        </button>
+        <button className="inline-toggle-item" onClick={() => setShowSettings(true)}>
+          알림 설정
+        </button>
+      </div>
+
+      {showRoutines && (
+        <RoutineManager
+          routines={routines}
+          onSave={onRoutinesSave}
+          onClose={() => setShowRoutines(false)}
+        />
+      )}
 
       {showSettings && (
         <>

@@ -275,9 +275,21 @@ input:focus, textarea:focus {
   background: #1a2742;
 }
 
+/* 흐림을 항목 전체에 걸면 opacity가 합성 그룹을 만들어 자식인 툴팁까지 반투명해진다.
+   툴팁은 오버레이라 또렷해야 하므로, 흐림 대상을 본문 요소로만 좁힌다 */
 .schedule-item.past {
-  opacity: 0.5;
   border-left-color: #555;
+}
+
+/* .schedule-content-tooltip은 .schedule-content의 형제라 여기 영향을 받지 않는다.
+   ::after로 툴팁을 다는 .routine-badge는 부모를 흐리면 상쇄가 불가능하므로 손대지 않는다
+   (기본 opacity 0.7로 이미 물러나 있다). */
+.schedule-item.past .schedule-date,
+.schedule-item.past .schedule-time,
+.schedule-item.past .schedule-content,
+.schedule-item.past .edit-btn,
+.schedule-item.past .delete-btn {
+  opacity: 0.5;
 }
 
 .schedule-item.notified {
@@ -2719,4 +2731,496 @@ input:focus, textarea:focus {
 .confirm-btn-ok:focus {
   outline: 2px solid rgba(233, 69, 96, 0.5);
   outline-offset: 2px;
+}
+
+/* ==================== */
+/* 반복 일정 (Routines) */
+/* ==================== */
+
+/* 하단 고정 바 — 기존 .inline-settings-toggle 자리를 둘로 나눠 쓴다 */
+.inline-toggle-bar {
+  position: absolute;
+  bottom: -20px;
+  left: -20px;
+  right: -20px;
+  display: flex;
+  z-index: 5;
+}
+
+.inline-toggle-item {
+  flex: 1;
+  background: rgba(233, 69, 96, 0.15);
+  border: none;
+  border-radius: 0;
+  color: #e94560;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 10px 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.2s;
+}
+
+.inline-toggle-item + .inline-toggle-item {
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.inline-toggle-item:hover {
+  color: #fff;
+  background: rgba(233, 69, 96, 0.25);
+}
+
+.routine-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 8px;
+  background: rgba(233, 69, 96, 0.4);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+/* 일정 목록의 반복 배지 */
+.routine-badge {
+  position: relative;
+  font-size: 11px;
+  opacity: 0.7;
+  cursor: default;
+}
+
+.routine-badge::after {
+  content: attr(data-tooltip);
+  display: none;
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 6px);
+  transform: translateX(-50%);
+  background: #1a1a2e;
+  border: 1px solid #e94560;
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 11px;
+  color: #ccc;
+  white-space: nowrap;
+  z-index: 100;
+  pointer-events: none;
+}
+
+.routine-badge:hover::after {
+  display: block;
+}
+
+/* 모달 — 팝업 창이 380px이므로 그 안에 여백을 두고 들어가야 한다 */
+.routine-modal {
+  width: 340px;
+  max-height: 84vh;
+  overflow-y: auto;
+}
+
+.main-mode .routine-modal {
+  width: 420px;
+}
+
+.routine-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 240px;
+  overflow-y: auto;
+  margin-bottom: 10px;
+}
+
+.routine-empty {
+  padding: 24px 12px;
+  text-align: center;
+  color: #666;
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.routine-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: #1a2742;
+  border-radius: 8px;
+  border-left: 3px solid #e94560;
+  transition: background 0.2s;
+}
+
+.routine-item:hover {
+  background: #223055;
+}
+
+.routine-item.off {
+  opacity: 0.45;
+  border-left-color: #555;
+}
+
+.routine-toggle {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 0;
+  line-height: 1;
+  transition: transform 0.2s;
+}
+
+.routine-toggle:hover {
+  transform: scale(1.15);
+}
+
+.routine-body {
+  flex: 1;
+  min-width: 0;
+  cursor: pointer;
+}
+
+.routine-content {
+  font-size: 13px;
+  color: #e0e0e0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.routine-desc {
+  font-size: 11px;
+  color: #8a94ad;
+  margin-top: 2px;
+}
+
+/* 공휴일 상태 표시 */
+.routine-holiday-box {
+  padding: 8px 10px;
+  margin-bottom: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 8px;
+}
+
+.routine-holiday-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 11px;
+  color: #8a94ad;
+}
+
+.routine-holiday-warn {
+  color: #e0a44c;
+}
+
+.routine-holiday-summary {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: none;
+  border: none;
+  padding: 0;
+  color: #8a94ad;
+  font-size: 11px;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.routine-holiday-summary:hover {
+  color: #ccc;
+}
+
+.routine-caret {
+  display: inline-block;
+  font-size: 9px;
+  transition: transform 0.2s;
+}
+
+.routine-caret.open {
+  transform: rotate(90deg);
+}
+
+.routine-holiday-list {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+/* 스크롤해도 어느 연도를 보고 있는지 놓치지 않도록 상단에 고정.
+   배경은 .routine-holiday-box(#16213e 위 흰색 3%)와 같은 값이라야 행이 비쳐 보이지 않는다 */
+.routine-holiday-year {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #1d2844;
+  font-size: 10px;
+  font-weight: 600;
+  color: #8a94ad;
+  letter-spacing: 0.03em;
+  padding: 4px 2px;
+}
+
+.routine-holiday-row {
+  display: flex;
+  gap: 10px;
+  font-size: 11px;
+  padding: 3px 2px;
+  color: #ccc;
+}
+
+.routine-holiday-row.past {
+  opacity: 0.4;
+}
+
+.routine-holiday-date {
+  color: #e06c75;
+  min-width: 62px;
+  font-variant-numeric: tabular-nums;
+}
+
+.routine-holiday-name {
+  color: #a8b0c4;
+}
+
+/* 갱신 버튼 — 결과가 보이지 않으면 먹통으로 오해한다 */
+.routine-refresh-btn {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: #ccc;
+  font-size: 11px;
+  padding: 4px 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.routine-refresh-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.routine-refresh-btn.loading {
+  opacity: 0.7;
+  cursor: default;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.routine-refresh-btn.success {
+  background: rgba(76, 175, 80, 0.18);
+  border-color: rgba(76, 175, 80, 0.5);
+  color: #6fce73;
+}
+
+.routine-refresh-btn.error {
+  background: rgba(224, 164, 76, 0.18);
+  border-color: rgba(224, 164, 76, 0.5);
+  color: #e0a44c;
+}
+
+/* 갱신 시각 — 버튼과 한 쌍이므로 같은 줄, 버튼 바로 왼쪽에 붙인다 */
+.routine-holiday-meta-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.routine-holiday-meta {
+  font-size: 10px;
+  color: #6a7286;
+  white-space: nowrap;
+  cursor: default;
+}
+
+.routine-holiday-meta.success {
+  color: #6fce73;
+}
+
+.routine-refresh-msg {
+  margin-top: 6px;
+  font-size: 10px;
+}
+
+.routine-refresh-msg.error {
+  color: #e0a44c;
+}
+
+/* 본문이 길어져도 갱신 버튼을 밀어내지 않게 */
+.routine-holiday-summary {
+  min-width: 0;
+}
+
+.routine-holiday-summary > span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 편집 폼 */
+.routine-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* 내용 입력은 .time-input(125px 고정)을 물려받으면 안 된다 — 폼 폭을 꽉 채운다 */
+.routine-form > input[type='text'] {
+  width: 100%;
+  padding: 9px 12px;
+}
+
+/* 모달 세로가 빠듯해서 행 간격을 줄인다 (팝업 창 높이 550px) */
+.routine-modal .settings-row {
+  padding: 7px 0;
+}
+
+.routine-seg {
+  display: flex;
+  gap: 6px;
+}
+
+.routine-seg-btn {
+  flex: 1;
+  padding: 8px 4px;
+  background: #1a2742;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  color: #8a94ad;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.routine-seg-btn:hover {
+  color: #ccc;
+}
+
+.routine-seg-btn.active {
+  background: rgba(233, 69, 96, 0.18);
+  border-color: rgba(233, 69, 96, 0.5);
+  color: #e94560;
+  font-weight: 600;
+}
+
+.routine-weekdays {
+  display: flex;
+  gap: 4px;
+}
+
+.routine-day-btn {
+  flex: 1;
+  aspect-ratio: 1;
+  background: #1a2742;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  color: #8a94ad;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.routine-day-btn.sun {
+  color: #e06c75;
+}
+
+.routine-day-btn.sat {
+  color: #6c9ce0;
+}
+
+.routine-day-btn:hover {
+  background: #223055;
+}
+
+.routine-day-btn.active {
+  background: rgba(233, 69, 96, 0.25);
+  border-color: rgba(233, 69, 96, 0.6);
+  color: #fff;
+  font-weight: 600;
+}
+
+.routine-hint {
+  font-size: 11px;
+  color: #7a839a;
+  padding: 0 2px;
+  line-height: 1.5;
+}
+
+/* 미리보기 — 시프트 결과가 눈에 보여야 옵션을 이해할 수 있다 */
+.routine-preview {
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 8px;
+  padding: 8px 12px;
+}
+
+.routine-preview-title {
+  font-size: 11px;
+  color: #7a839a;
+  margin-bottom: 4px;
+}
+
+.routine-preview-empty {
+  font-size: 12px;
+  color: #666;
+}
+
+/* 세로로 쌓으면 4줄을 먹는다 — 칩으로 감싸 흘려보낸다 */
+.routine-preview-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+}
+
+.routine-preview-chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 3px;
+  font-size: 12px;
+  color: #ccc;
+  white-space: nowrap;
+}
+
+/* 이동 전 날짜 — 취소선으로 "이 날이 아니다"를 한눈에 */
+.routine-preview-from {
+  font-size: 11px;
+  color: #7a839a;
+  text-decoration: line-through;
+  cursor: default;
+}
+
+.routine-preview-arrow {
+  font-size: 10px;
+  color: #7a839a;
+}
+
+.routine-preview-chip .shifted {
+  color: #e0a44c;
+  font-weight: 600;
+}
+
+.routine-add-btn {
+  background: rgba(233, 69, 96, 0.15) !important;
+  color: #e94560 !important;
+}
+
+.routine-save-btn {
+  background: rgba(233, 69, 96, 0.15) !important;
+  color: #e94560 !important;
+}
+
+.routine-save-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.routine-modal .settings-row select,
+.routine-modal .settings-row input[type='time'] {
+  max-width: 170px;
 }

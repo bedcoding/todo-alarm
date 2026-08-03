@@ -1,8 +1,8 @@
 import { app, BrowserWindow, ipcMain, Menu, Notification, Tray, nativeImage, screen, net, powerMonitor } from 'electron'
 import path from 'path'
 import fs from 'fs'
-import type { AppData, Schedule, Memo, Settings, AwayCheckSettings, TrashItem, DutySettings, SlackMethod } from '../types'
-import { DEFAULT_SETTINGS, DEFAULT_AWAY_CHECK, DEFAULT_DUTY } from '../types'
+import type { AppData, Schedule, Memo, Settings, AwayCheckSettings, TrashItem, DutySettings, SlackMethod, RoutineRule, HolidayCache, HolidayEntry, HolidayShift, HolidayBasis } from '../types'
+import { DEFAULT_SETTINGS, DEFAULT_AWAY_CHECK, DEFAULT_DUTY, makeId } from '../types'
 
 let dataPath: string
 
@@ -20,7 +20,9 @@ function readData(): AppData {
       awayCheck: { ...DEFAULT_AWAY_CHECK, ...raw.awayCheck },
       morningAlertSentDate: raw.morningAlertSentDate,
       trash: raw.trash ?? [],
-      duty: { ...DEFAULT_DUTY, ...rawDuty }
+      duty: { ...DEFAULT_DUTY, ...rawDuty },
+      routines: (raw.routines ?? []).map(normalizeRoutine),
+      holidays: raw.holidays
     }
   } catch {
     return {
@@ -29,8 +31,35 @@ function readData(): AppData {
       settings: { ...DEFAULT_SETTINGS },
       awayCheck: { ...DEFAULT_AWAY_CHECK },
       trash: [],
-      duty: { ...DEFAULT_DUTY }
+      duty: { ...DEFAULT_DUTY },
+      routines: []
     }
+  }
+}
+
+// 손상/구버전 규칙이 전개 루프를 깨뜨리지 않도록 방어적으로 정규화
+function normalizeRoutine(raw: Record<string, unknown>): RoutineRule {
+  const freq = raw.freq === 'weekly' ? 'weekly' : 'monthly'
+  const rawDay = raw.monthDay
+  const monthDay: number | 'last' =
+    rawDay === 'last' ? 'last' : Math.min(31, Math.max(1, Number(rawDay) || 1))
+  const weekdays = Array.isArray(raw.weekdays)
+    ? [...new Set(raw.weekdays.map(Number).filter((d) => d >= 0 && d <= 6))].sort()
+    : [1]
+  const shift = raw.holidayShift
+  const basis = raw.holidayBasis
+  return {
+    id: Number(raw.id) || makeId(),
+    content: String(raw.content ?? ''),
+    time: /^\d{2}:\d{2}$/.test(String(raw.time)) ? String(raw.time) : '10:00',
+    enabled: raw.enabled !== false,
+    freq,
+    monthDay,
+    weekdays: weekdays.length > 0 ? weekdays : [1],
+    holidayShift: shift === 'next' || shift === 'prev' ? shift : 'none',
+    holidayBasis: basis === 'weekend' ? 'weekend' : 'publicHoliday',
+    skippedKeys: Array.isArray(raw.skippedKeys) ? raw.skippedKeys.map(String) : [],
+    createdAt: String(raw.createdAt ?? new Date().toISOString())
   }
 }
 
@@ -537,6 +566,288 @@ function scheduleDutyMidnightTrigger(): void {
   }, next.getTime() - now.getTime())
 }
 
+/* ==================== 반복 일정 (Routines) ==================== */
+
+// 토큰 없이 쓸 수 있는 공개 공휴일 API. 실패해도 토·일 판정은 항상 동작한다.
+const HOLIDAY_API = 'https://date.nager.at/api/v3/PublicHolidays'
+// 규칙을 실제 Schedule로 실체화해두는 범위.
+// 매일 자정에 하루씩 밀리며 채워지므로 짧게 잡아도 알림을 놓치지 않는다.
+// 길게 잡으면 일정 목록이 반복 일정으로 도배되므로 임박한 것만 띄운다.
+// (더 앞의 회차는 반복 일정 모달의 "다음 알림" 미리보기에서 확인)
+const ROUTINE_HORIZON_DAYS = 7
+// 앱이 꺼져 있는 동안 지나간 발생분을 며칠까지 소급해 "놓친 알림"으로 띄울지.
+// 금요일 알림을 월요일에 받는 정도면 충분하다. 길게 잡으면 발송이 끝난 과거 회차가
+// 목록에 그대로 쌓여서 전개 범위를 짧게 둔 의미가 없어진다.
+const ROUTINE_CATCHUP_DAYS = 3
+// 임시공휴일이 뒤늦게 지정되는 경우가 있어 주기적으로 다시 받는다
+const HOLIDAY_REFRESH_MS = 30 * 24 * 60 * 60 * 1000
+
+let holidaySet = new Set<string>()
+let routineMidnightTimer: ReturnType<typeof setTimeout> | null = null
+
+/** 구버전 캐시는 날짜 문자열 배열이었다 — 읽을 때 흡수한다 */
+function normalizeHolidayEntries(raw: unknown): HolidayEntry[] {
+  if (!Array.isArray(raw)) return []
+  return raw
+    .map((v) =>
+      typeof v === 'string'
+        ? { date: v, name: '' }
+        : { date: String((v as HolidayEntry)?.date ?? ''), name: String((v as HolidayEntry)?.name ?? '') }
+    )
+    .filter((e) => /^\d{4}-\d{2}-\d{2}$/.test(e.date))
+}
+
+function allHolidayEntries(cache?: HolidayCache): HolidayEntry[] {
+  if (!cache) return []
+  return Object.values(cache.years).flatMap(normalizeHolidayEntries)
+}
+
+function loadHolidayCache(): void {
+  holidaySet = new Set(allHolidayEntries(readData().holidays).map((e) => e.date))
+}
+
+function parseDateStr(s: string): Date {
+  const [y, m, d] = s.split('-').map(Number)
+  return new Date(y, m - 1, d)
+}
+
+function addDays(s: string, n: number): string {
+  const d = parseDateStr(s)
+  d.setDate(d.getDate() + n)
+  return todayDateStr(d)
+}
+
+/**
+ * 휴일 판정. basis='weekend'면 토·일만, 'publicHoliday'면 공휴일까지 포함한다.
+ * 공휴일 캐시를 못 받아온 상태여도 주말 판정은 항상 동작한다.
+ */
+function isNonWorkingDay(dateStr: string, basis: HolidayBasis): boolean {
+  const day = parseDateStr(dateStr).getDay()
+  if (day === 0 || day === 6) return true
+  return basis === 'publicHoliday' && holidaySet.has(dateStr)
+}
+
+/** 휴일이면 direction 방향 영업일까지 이동. 연휴가 길어도 14일이면 반드시 빠져나온다 */
+function shiftToBusinessDay(dateStr: string, direction: HolidayShift, basis: HolidayBasis): string {
+  if (direction === 'none') return dateStr
+  const step = direction === 'next' ? 1 : -1
+  let cur = dateStr
+  for (let i = 0; i < 14 && isNonWorkingDay(cur, basis); i++) {
+    cur = addDays(cur, step)
+  }
+  return cur
+}
+
+function neededHolidayYears(): number[] {
+  const today = todayDateStr()
+  const startYear = parseDateStr(today).getFullYear()
+  const endYear = parseDateStr(addDays(today, ROUTINE_HORIZON_DAYS)).getFullYear()
+  return [...new Set([startYear, endYear])]
+}
+
+async function fetchHolidays(years: number[]): Promise<{ ok: boolean; count: number; error?: string }> {
+  const cache: HolidayCache = readData().holidays ?? { years: {}, fetchedAt: '' }
+  let count = 0
+  let lastError = ''
+
+  for (const year of years) {
+    try {
+      const res = await net.fetch(`${HOLIDAY_API}/${year}/KR`)
+      if (!res.ok) {
+        lastError = `HTTP ${res.status}`
+        continue
+      }
+      const list = (await res.json()) as { date: string; localName?: string; name?: string; types?: string[] }[]
+      if (!Array.isArray(list)) {
+        lastError = '응답 형식이 예상과 다릅니다'
+        continue
+      }
+      const seen = new Set<string>()
+      const entries: HolidayEntry[] = []
+      for (const h of list) {
+        if (Array.isArray(h.types) && !h.types.includes('Public')) continue
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(h.date) || seen.has(h.date)) continue
+        seen.add(h.date)
+        entries.push({ date: h.date, name: h.localName || h.name || '' })
+      }
+      cache.years[String(year)] = entries
+      count += entries.length
+    } catch (e) {
+      lastError = e instanceof Error ? e.message : String(e)
+    }
+  }
+
+  if (count > 0) {
+    cache.fetchedAt = new Date().toISOString()
+    // fetch 대기 중 다른 쓰기가 있었을 수 있으므로 최신 데이터에 얹는다
+    const fresh = readData()
+    fresh.holidays = cache
+    writeData(fresh)
+    holidaySet = new Set(allHolidayEntries(cache).map((e) => e.date))
+    return { ok: true, count }
+  }
+  return { ok: false, count: 0, error: lastError || '네트워크에 연결할 수 없습니다' }
+}
+
+/** 필요한 연도가 캐시에 없거나 오래됐으면 받아온다. 실패해도 조용히 넘어간다(주말만 적용) */
+async function ensureHolidays(force = false): Promise<{ ok: boolean; count: number; error?: string }> {
+  const cache = readData().holidays
+  const cached = allHolidayEntries(cache)
+  // 이름 없이 날짜만 저장하던 구버전 캐시 → 목록에 이름을 띄우려면 한 번 다시 받아야 한다
+  const missingNames = cached.length > 0 && cached.some((e) => !e.name)
+  const stale =
+    !cache?.fetchedAt ||
+    Date.now() - new Date(cache.fetchedAt).getTime() > HOLIDAY_REFRESH_MS ||
+    missingNames
+  const years = neededHolidayYears()
+  const missing = years.filter((y) => !cache?.years?.[String(y)])
+  const target = force || stale ? years : missing
+  if (target.length === 0) return { ok: true, count: 0 }
+  return fetchHolidays(target)
+}
+
+interface Occurrence {
+  key: string // 시프트 전 기준일 기반 멱등키 — 시프트 정책을 바꿔도 스킵 기록이 유지된다
+  baseDate: string // 규칙상 원래 날짜
+  date: string // 휴일 보정까지 끝난 실제 알림 날짜
+}
+
+function lastDayOfMonth(year: number, month0: number): number {
+  return new Date(year, month0 + 1, 0).getDate()
+}
+
+/** from~to(포함) 구간의 발생분 계산 */
+function expandRoutine(rule: RoutineRule, from: string, to: string): Occurrence[] {
+  const out: Occurrence[] = []
+  const fromD = parseDateStr(from)
+  const toD = parseDateStr(to)
+
+  if (rule.freq === 'weekly') {
+    // 요일 고정은 휴일 보정을 하지 않는다 (토요일 과외를 월요일로 밀 수는 없으므로)
+    for (const d = new Date(fromD); d <= toD; d.setDate(d.getDate() + 1)) {
+      if (!rule.weekdays.includes(d.getDay())) continue
+      const ds = todayDateStr(d)
+      out.push({ key: `${rule.id}:${ds}`, baseDate: ds, date: ds })
+    }
+    return out
+  }
+
+  // 시프트로 구간 안팎을 넘나들 수 있으니 앞뒤 한 달씩 여유를 두고 훑는다
+  const cursor = new Date(fromD.getFullYear(), fromD.getMonth() - 1, 1)
+  const guard = new Date(toD.getFullYear(), toD.getMonth() + 1, 1)
+  while (cursor <= guard) {
+    const y = cursor.getFullYear()
+    const m = cursor.getMonth()
+    const last = lastDayOfMonth(y, m)
+    // 31일 지정인데 그 달에 없으면 말일로 클램프 — 2월에 조용히 건너뛰는 사고 방지
+    const day = rule.monthDay === 'last' ? last : Math.min(rule.monthDay, last)
+    const baseDate = todayDateStr(new Date(y, m, day))
+    const date = shiftToBusinessDay(baseDate, rule.holidayShift, rule.holidayBasis)
+    if (date >= from && date <= to) {
+      out.push({ key: `${rule.id}:${baseDate}`, baseDate, date })
+    }
+    cursor.setMonth(cursor.getMonth() + 1)
+  }
+  return out
+}
+
+/** 규칙을 실제 Schedule로 전개. 이미 있는 발생분과 사용자가 스킵한 건 건너뛴다 */
+function materializeRoutines(): boolean {
+  const data = readData()
+  if (data.routines.length === 0) return false
+
+  const today = todayDateStr()
+  const horizon = addDays(today, ROUTINE_HORIZON_DAYS)
+  // 앱이 꺼져 있던 동안의 발생분도 훑어야 "놓친 알림"으로 띄울 수 있다
+  const catchupFrom = addDays(today, -ROUTINE_CATCHUP_DAYS)
+  const existingKeys = new Set(
+    data.schedules.map((s) => s.occurrenceKey).filter((k): k is string => !!k)
+  )
+  const usedIds = new Set(data.schedules.map((s) => s.id))
+  const now = Date.now()
+  const added: Schedule[] = []
+
+  for (const rule of data.routines) {
+    if (!rule.enabled || !rule.content.trim()) continue
+    const skipped = new Set(rule.skippedKeys)
+    const createdAt = new Date(rule.createdAt).getTime()
+    for (const occ of expandRoutine(rule, catchupFrom, horizon)) {
+      if (existingKeys.has(occ.key) || skipped.has(occ.key)) continue
+      const datetime = new Date(`${occ.date}T${rule.time}`)
+      const t = datetime.getTime()
+      if (t < now) {
+        // 규칙을 만들기 전의 회차까지 소급하면 등록 직후 과거 알림이 쏟아진다
+        if (Number.isNaN(createdAt) || t < createdAt) continue
+        // 소급 한도를 넘긴 건 이제 와서 알릴 의미가 없다
+        if (now - t > ROUTINE_CATCHUP_DAYS * 86400000) continue
+      }
+
+      let id = makeId()
+      while (usedIds.has(id)) id++
+      usedIds.add(id)
+      existingKeys.add(occ.key)
+
+      added.push({
+        id,
+        date: occ.date,
+        time: rule.time,
+        content: rule.content.trim(),
+        datetime: datetime.toISOString(),
+        notified: false,
+        routineId: rule.id,
+        occurrenceKey: occ.key
+      })
+    }
+  }
+
+  if (added.length === 0) return false
+  data.schedules = [...data.schedules, ...added]
+  writeData(data)
+  sendToAllWindows('schedules-updated', data.schedules)
+  return true
+}
+
+/**
+ * 규칙이 바뀐 뒤 호출. 아직 발송되지 않은 미래 자동생성분을 걷어내고 처음부터 다시 전개한다.
+ * 이미 발송됐거나(notified) 개별 수정된(detached) 건은 기록이므로 보존한다.
+ */
+function rematerializeRoutines(): void {
+  const data = readData()
+  const now = Date.now()
+  const before = data.schedules.length
+
+  data.schedules = data.schedules.filter((s) => {
+    if (!s.routineId) return true // 손으로 만든 일정
+    if (s.detached || s.notified) return true
+    return new Date(s.datetime).getTime() <= now
+  })
+
+  let changed = data.schedules.length !== before
+  if (changed) writeData(data)
+  if (materializeRoutines()) changed = true
+  if (changed) sendToAllWindows('schedules-updated', readData().schedules)
+
+  scheduleExactTimers()
+}
+
+/** 날짜가 바뀌면 지평선이 하루 밀리므로 새 발생분을 채워 넣는다 */
+function scheduleRoutineMidnightTrigger(): void {
+  if (routineMidnightTimer) {
+    clearTimeout(routineMidnightTimer)
+    routineMidnightTimer = null
+  }
+  const now = new Date()
+  const next = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 5)
+  if (next.getTime() <= now.getTime()) next.setDate(next.getDate() + 1)
+
+  routineMidnightTimer = setTimeout(() => {
+    void ensureHolidays().finally(() => {
+      if (materializeRoutines()) scheduleExactTimers()
+      scheduleRoutineMidnightTrigger()
+    })
+  }, next.getTime() - now.getTime())
+}
+
 function cleanupTrash(): void {
   trashTimers.forEach((t) => clearTimeout(t))
   trashTimers = []
@@ -595,6 +906,9 @@ function startAlarmChecker(): void {
   const data = readData()
   const interval = data.settings.checkInterval
 
+  // 반복 규칙을 먼저 실체화해야 아래 타이머 예약에 함께 잡힌다
+  materializeRoutines()
+
   // 정확한 시간에 알림 예약
   scheduleExactTimers()
   scheduleMorningAlert()
@@ -603,6 +917,7 @@ function startAlarmChecker(): void {
   // 주기적 체크 (새로 추가된 일정 반영)
   alarmIntervalId = setInterval(() => {
     // 새로 추가된 일정 반영을 위해 타이머 재설정
+    materializeRoutines()
     scheduleExactTimers()
     scheduleMorningAlert()
     scheduleDutyAlert()
@@ -705,12 +1020,19 @@ app.whenReady().then(() => {
   morningAlertSentDate = initial.morningAlertSentDate || ''
   cachedAwayCheck = initial.awayCheck
   cachedSettings = initial.settings
+  loadHolidayCache()
   cleanupTrash()
   createTray()
   createPopupWindow()
   startAlarmChecker()
   startAwayChecker()
   scheduleDutyMidnightTrigger()
+  scheduleRoutineMidnightTrigger()
+
+  // 공휴일은 네트워크가 늦어도 앱 기동을 막지 않는다. 받아온 뒤 시프트를 다시 계산
+  void ensureHolidays().then((r) => {
+    if (r.ok && r.count > 0) rematerializeRoutines()
+  })
 
   powerMonitor.on('resume', () => {
     restartAlarmChecker()
@@ -911,6 +1233,67 @@ ipcMain.handle('reset-duty-last-sent', () => {
   sendToAllWindows('duty-updated', data.duty)
   scheduleDutyAlert()
   return true
+})
+
+/* ---------- 반복 일정 ---------- */
+
+ipcMain.handle('get-routines', () => readData().routines)
+
+ipcMain.handle('save-routines', (_, routines: RoutineRule[]) => {
+  const data = readData()
+  data.routines = (routines ?? []).map((r) => normalizeRoutine(r as unknown as Record<string, unknown>))
+  writeData(data)
+  sendToAllWindows('routines-updated', data.routines)
+  rematerializeRoutines()
+  return true
+})
+
+/** 반복 인스턴스를 개별 삭제했을 때 — 다음 전개에서 되살아나지 않도록 기록 */
+ipcMain.handle('skip-occurrence', (_, routineId: number, occurrenceKey: string) => {
+  const data = readData()
+  const rule = data.routines.find((r) => r.id === routineId)
+  if (!rule || rule.skippedKeys.includes(occurrenceKey)) return false
+  rule.skippedKeys.push(occurrenceKey)
+  writeData(data)
+  sendToAllWindows('routines-updated', data.routines)
+  return true
+})
+
+/** 삭제 되돌리기 */
+ipcMain.handle('unskip-occurrence', (_, routineId: number, occurrenceKey: string) => {
+  const data = readData()
+  const rule = data.routines.find((r) => r.id === routineId)
+  if (!rule) return false
+  rule.skippedKeys = rule.skippedKeys.filter((k) => k !== occurrenceKey)
+  writeData(data)
+  sendToAllWindows('routines-updated', data.routines)
+  return true
+})
+
+ipcMain.handle('get-holidays', () => {
+  const cache = readData().holidays
+  const entries = allHolidayEntries(cache).sort((a, b) => a.date.localeCompare(b.date))
+  return { entries, fetchedAt: cache?.fetchedAt, offline: entries.length === 0 }
+})
+
+ipcMain.handle('refresh-holidays', async () => {
+  const result = await ensureHolidays(true)
+  if (result.ok) rematerializeRoutines()
+  return { success: result.ok, count: result.count, error: result.error }
+})
+
+/** 규칙 편집 중 "실제로 언제 울리는지"를 보여주기 위한 미리보기 */
+ipcMain.handle('preview-routine', (_, rule: RoutineRule) => {
+  const r = normalizeRoutine(rule as unknown as Record<string, unknown>)
+  const today = todayDateStr()
+  const span = r.freq === 'weekly' ? 35 : 400
+  return expandRoutine(r, today, addDays(today, span))
+    .slice(0, 4)
+    .map((o) => ({
+      date: o.date,
+      shifted: o.date !== o.baseDate,
+      reason: o.date !== o.baseDate ? o.baseDate : undefined
+    }))
 })
 
 interface DutyApiMember {

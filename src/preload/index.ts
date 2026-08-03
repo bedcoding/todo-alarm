@@ -40,5 +40,17 @@ contextBridge.exposeInMainWorld('api', {
   testDutyDispatch: () => ipcRenderer.invoke('test-duty-dispatch'),
   applyDutyApi: (input: { mode: 'url'; url: string } | { mode: 'paste'; payload: string }) =>
     ipcRenderer.invoke('apply-duty-api', input),
-  resetDutyLastSent: () => ipcRenderer.invoke('reset-duty-last-sent')
+  resetDutyLastSent: () => ipcRenderer.invoke('reset-duty-last-sent'),
+  getRoutines: () => ipcRenderer.invoke('get-routines'),
+  saveRoutines: (routines: unknown[]) => ipcRenderer.invoke('save-routines', routines),
+  onRoutinesUpdated: (callback: (routines: unknown[]) => void) => {
+    ipcRenderer.on('routines-updated', (_, routines) => callback(routines))
+  },
+  skipOccurrence: (routineId: number, occurrenceKey: string) =>
+    ipcRenderer.invoke('skip-occurrence', routineId, occurrenceKey),
+  unskipOccurrence: (routineId: number, occurrenceKey: string) =>
+    ipcRenderer.invoke('unskip-occurrence', routineId, occurrenceKey),
+  getHolidays: () => ipcRenderer.invoke('get-holidays'),
+  refreshHolidays: () => ipcRenderer.invoke('refresh-holidays'),
+  previewRoutine: (rule: unknown) => ipcRenderer.invoke('preview-routine', rule)
 })

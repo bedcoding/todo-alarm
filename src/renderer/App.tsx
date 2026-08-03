@@ -5,7 +5,7 @@ import AwayCheckTab from './components/AwayCheckTab'
 import SettingsTab from './components/SettingsTab'
 import TrashTab from './components/TrashTab'
 import DutyTab from './components/DutyTab'
-import type { Schedule, Memo, Settings, AwayCheckSettings, TrashItem, DutySettings } from '../types'
+import type { Schedule, Memo, Settings, AwayCheckSettings, TrashItem, DutySettings, RoutineRule } from '../types'
 import { DEFAULT_SETTINGS, DEFAULT_AWAY_CHECK, DEFAULT_DUTY, makeId } from '../types'
 
 const isPopup = window.location.hash === '#popup'
@@ -19,6 +19,7 @@ export default function App() {
   const [settings, setSettings] = useState<Settings>({ ...DEFAULT_SETTINGS })
   const [awayCheck, setAwayCheck] = useState<AwayCheckSettings>({ ...DEFAULT_AWAY_CHECK })
   const [duty, setDuty] = useState<DutySettings>({ ...DEFAULT_DUTY })
+  const [routines, setRoutines] = useState<RoutineRule[]>([])
   const [trash, setTrash] = useState<TrashItem[]>([])
   const [idleSeconds, setIdleSeconds] = useState(0)
   const [pinned, setPinned] = useState(false)
@@ -32,6 +33,7 @@ export default function App() {
     window.api.getAwayCheck().then(setAwayCheck)
     window.api.getDuty().then(setDuty)
     window.api.getTrash().then(setTrash)
+    window.api.getRoutines().then(setRoutines)
 
     window.api.onSchedulesUpdated((updated) => setSchedules(updated))
     window.api.onMemosUpdated((updated) => setMemos(updated))
@@ -39,6 +41,7 @@ export default function App() {
     window.api.onDutyUpdated((updated) => setDuty(updated))
     window.api.onIdleStatus((data) => setIdleSeconds(data.idleSeconds))
     window.api.onTrashUpdated((updated) => setTrash(updated))
+    window.api.onRoutinesUpdated((updated) => setRoutines(updated))
   }, [])
 
   const saveSchedules = async (newSchedules: Schedule[]) => {
@@ -71,6 +74,11 @@ export default function App() {
     await window.api.saveTrash(newTrash)
   }
 
+  const saveRoutines = async (newRoutines: RoutineRule[]) => {
+    setRoutines(newRoutines)
+    await window.api.saveRoutines(newRoutines)
+  }
+
   const showUndoToast = (message: string, onUndo: () => void) => {
     if (toastTimerRef.current) clearTimeout(toastTimerRef.current)
     setToast({ message, onUndo })
@@ -83,11 +91,19 @@ export default function App() {
     const newSchedules = schedules.filter((s) => s.id !== id)
     const trashItem: TrashItem = { id: makeId(), type: 'schedule', data: target, deletedAt: new Date().toISOString() }
     const newTrash = [...trash, trashItem]
+    // 반복 발생분은 스킵을 먼저 기록해야 자동 전개가 곧바로 되살리지 않는다
+    if (target.routineId && target.occurrenceKey) {
+      await window.api.skipOccurrence(target.routineId, target.occurrenceKey)
+    }
     await saveSchedules(newSchedules)
     await saveTrash(newTrash)
     showUndoToast('일정이 삭제되었습니다', async () => {
+      // 복원을 먼저 하고 스킵을 풀어야 중복 생성되지 않는다
       await saveSchedules([...newSchedules, target])
       await saveTrash(newTrash.filter((t) => t.id !== trashItem.id))
+      if (target.routineId && target.occurrenceKey) {
+        await window.api.unskipOccurrence(target.routineId, target.occurrenceKey)
+      }
     })
   }
 
@@ -107,7 +123,11 @@ export default function App() {
 
   const restoreFromTrash = async (item: TrashItem) => {
     if (item.type === 'schedule') {
-      await saveSchedules([...schedules, item.data as Schedule])
+      const s = item.data as Schedule
+      await saveSchedules([...schedules, s])
+      if (s.routineId && s.occurrenceKey) {
+        await window.api.unskipOccurrence(s.routineId, s.occurrenceKey)
+      }
     } else {
       await saveMemos([item.data as Memo, ...memos])
     }
@@ -211,7 +231,7 @@ export default function App() {
       </div>
       <div className="content">
         <div className={`tab-panel ${activeTab === 'schedule' ? 'active' : ''}`}>
-          <ScheduleTab schedules={schedules} onSave={saveSchedules} onDelete={deleteSchedule} settings={settings} onSettingsChange={(patch) => saveSettings({ ...settings, ...patch })} isPopup={isPopup} />
+          <ScheduleTab schedules={schedules} onSave={saveSchedules} onDelete={deleteSchedule} settings={settings} onSettingsChange={(patch) => saveSettings({ ...settings, ...patch })} isPopup={isPopup} routines={routines} onRoutinesSave={saveRoutines} />
         </div>
         <div className={`tab-panel ${activeTab === 'memo' ? 'active' : ''}`}>
           <MemoTab memos={memos} onSave={saveMemos} onDelete={deleteMemo} />
