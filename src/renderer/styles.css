@@ -603,6 +603,8 @@ input:focus, textarea:focus {
   display: flex;
   flex-direction: column;
   height: 100%;
+  /* 툴팁의 기준 컨테이너 (스크롤 영역 밖) */
+  position: relative;
 }
 
 .memo-input-area {
@@ -624,6 +626,8 @@ input:focus, textarea:focus {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  /* 첫/마지막 항목의 드롭 표시선이 잘리지 않도록 여백 확보 */
+  padding: 5px 0;
 }
 
 
@@ -640,10 +644,56 @@ input:focus, textarea:focus {
   display: flex;
   align-items: center;
   gap: 8px;
+  position: relative;
+}
+
+.memo-item.slim:active {
+  cursor: grabbing;
+}
+
+.memo-grip {
+  flex-shrink: 0;
+  color: #4a5578;
+  font-size: 13px;
+  line-height: 1;
+  cursor: grab;
+  user-select: none;
+  transition: color 0.2s;
+}
+
+.memo-item:hover .memo-grip {
+  color: #8892b0;
+}
+
+.memo-item.dragging {
+  opacity: 0.4;
+}
+
+/* 드롭 위치 표시선 */
+.memo-item.drop-above::before,
+.memo-item.drop-below::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: #e94560;
+  border-radius: 2px;
+}
+
+.memo-item.drop-above::before {
+  top: -5px;
+}
+
+.memo-item.drop-below::after {
+  bottom: -5px;
+}
+
+.memo-item.dragging .memo-grip {
+  cursor: grabbing;
 }
 
 .memo-content-wrap {
-  position: relative;
   flex: 1;
   min-width: 0;
   display: flex;
@@ -659,11 +709,16 @@ input:focus, textarea:focus {
   min-width: 0;
 }
 
-.memo-content-tooltip {
-  display: none;
+/*
+ * 툴팁은 .memo-tab 기준으로 띄운다. .memo-list 안에 두면 absolute 요소가
+ * 스크롤 영역(scrollHeight)에 더해져 불필요한 스크롤이 생기고, 조상의
+ * overflow: hidden 에 잘린다.
+ */
+.memo-floating-tooltip {
   position: absolute;
   left: 0;
-  top: 110%;
+  max-width: 100%;
+  width: max-content;
   background: #1a1a2e;
   border: 1px solid #e94560;
   border-radius: 6px;
@@ -671,8 +726,6 @@ input:focus, textarea:focus {
   font-size: 12px;
   color: #e0e0e0;
   line-height: 1.5;
-  max-width: 320px;
-  width: max-content;
   word-break: break-word;
   white-space: pre-wrap;
   z-index: 100;
@@ -680,13 +733,17 @@ input:focus, textarea:focus {
   pointer-events: none;
 }
 
-.memo-content-wrap:hover .memo-content-tooltip {
-  display: block;
+.memo-floating-tooltip.above {
+  transform: translateY(-100%);
 }
 
-.memo-item:last-child .memo-content-tooltip {
-  top: auto;
-  bottom: 110%;
+.memo-tooltip-date {
+  display: block;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid #2a2a44;
+  color: #8892b0;
+  font-size: 11px;
 }
 
 .memo-content {
@@ -714,27 +771,6 @@ input:focus, textarea:focus {
   gap: 4px;
   margin-left: auto;
   flex-shrink: 0;
-}
-
-.move-btn {
-  background: none;
-  border: 1px solid #333;
-  border-radius: 4px;
-  color: #888;
-  font-size: 10px;
-  cursor: pointer;
-  padding: 2px 6px;
-  transition: all 0.2s;
-}
-
-.move-btn:hover:not(:disabled) {
-  color: #e0e0e0;
-  border-color: #e94560;
-}
-
-.move-btn:disabled {
-  opacity: 0.3;
-  cursor: default;
 }
 
 .memo-date {
