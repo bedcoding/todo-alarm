@@ -612,10 +612,18 @@ input:focus, textarea:focus {
   gap: 8px;
   margin-bottom: 16px;
   align-items: flex-end;
+  /* 목록 항목과 오른쪽 끝을 맞춘다 (.memo-list 의 스크롤바 4px + padding-right 8px) */
+  padding-right: 12px;
+}
+
+/* input 은 기본 폭(size 속성)이 있어 min-width: 0 없이는 끝까지 늘어나지 않는다 */
+.memo-input-area input[type='text'],
+.memo-input-area textarea {
+  flex: 1;
+  min-width: 0;
 }
 
 .memo-input-area textarea {
-  flex: 1;
   resize: none;
   font-family: inherit;
 }
