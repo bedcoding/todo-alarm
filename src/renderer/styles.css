@@ -396,12 +396,13 @@ input:focus, textarea:focus {
   transform: scale(1.15);
 }
 
+/* 첫 항목에서 스크롤 영역 밖으로 잘리지 않도록 기본은 아래로 띄운다 */
 .resend-btn::after {
   content: attr(data-tooltip);
   display: none;
   position: absolute;
   left: 50%;
-  bottom: calc(100% + 6px);
+  top: calc(100% + 6px);
   transform: translateX(-50%);
   background: #1a1a2e;
   border: 1px solid #e94560;
@@ -416,6 +417,11 @@ input:focus, textarea:focus {
 
 .resend-btn:hover::after {
   display: block;
+}
+
+.schedule-item:last-child .resend-btn::after {
+  top: auto;
+  bottom: calc(100% + 6px);
 }
 
 .delete-btn {
@@ -2794,12 +2800,14 @@ input:focus, textarea:focus {
   cursor: default;
 }
 
+/* 위로 띄우면 목록 첫 항목에서 스크롤 영역 밖으로 잘린다.
+   .schedule-content-tooltip과 같이 기본은 아래, 마지막 항목만 위로 뒤집는다 */
 .routine-badge::after {
   content: attr(data-tooltip);
   display: none;
   position: absolute;
   left: 50%;
-  bottom: calc(100% + 6px);
+  top: calc(100% + 6px);
   transform: translateX(-50%);
   background: #1a1a2e;
   border: 1px solid #e94560;
@@ -2814,6 +2822,12 @@ input:focus, textarea:focus {
 
 .routine-badge:hover::after {
   display: block;
+}
+
+/* 마지막 항목은 아래가 막혀 있으므로 위로 */
+.schedule-item:last-child .routine-badge::after {
+  top: auto;
+  bottom: calc(100% + 6px);
 }
 
 /* 모달 — 팝업 창이 380px이므로 그 안에 여백을 두고 들어가야 한다 */
