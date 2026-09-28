@@ -197,7 +197,8 @@ function togglePopup(): void {
 
   const trayBounds = tray!.getBounds()
   const windowBounds = popupWindow!.getBounds()
-  const display = screen.getDisplayNearestPoint({ x: trayBounds.x, y: trayBounds.y })
+  // macOS 27부터 외부 모니터에서는 아이콘 y가 화면 밖(-1)으로 들어와서 왼쪽 위 모서리로 고르면 다른 모니터가 잡힘
+  const display = screen.getDisplayMatching(trayBounds)
 
   const x = Math.round(trayBounds.x + trayBounds.width / 2 - windowBounds.width / 2)
   // macOS: 트레이가 위에 있으므로 아래로, Windows: 트레이가 아래에 있으므로 위로
