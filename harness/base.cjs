@@ -31,8 +31,8 @@ module.exports.boot = (seedExtra, opts = {}) => {
   const orig = Module._resolveFilename
   Module._resolveFilename = function (r, ...x) { return r === 'electron' ? 'electron-stub' : orig.call(this, r, ...x) }
   require.cache['electron-stub'] = { id:'electron-stub', filename:'electron-stub', loaded:true, exports:stub }
-  delete require.cache[require.resolve('/Users/wordword/Desktop/file/mac_dev/todo-alarm/out/main/index.js')]
-  require('/Users/wordword/Desktop/file/mac_dev/todo-alarm/out/main/index.js')
+  delete require.cache[require.resolve('../out/main/index.js')]
+  require('../out/main/index.js')
   return state
 }
 module.exports.read = () => JSON.parse(fs.readFileSync(path.join(USER_DATA,'data.json'),'utf-8'))
