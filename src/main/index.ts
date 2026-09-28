@@ -24,7 +24,8 @@ function readData(): AppData {
       routines: (raw.routines ?? []).map(normalizeRoutine),
       holidays: raw.holidays,
       skippedVersion: raw.skippedVersion,
-      lastUpdateCheckAt: raw.lastUpdateCheckAt
+      lastUpdateCheckAt: raw.lastUpdateCheckAt,
+      loginItemInitialized: raw.loginItemInitialized
     }
   } catch {
     return {
@@ -217,6 +218,20 @@ function togglePopup(): void {
   popupWindow!.focus()
 }
 
+// 개발 모드에서 등록하면 Electron 기본 앱이 로그인 항목에 들어간다
+const canSetLoginItem = process.platform === 'darwin' && app.isPackaged
+
+// 알람 앱이라 꺼져 있는 동안은 알림을 놓친다.
+// 처음 한 번만 로그인 항목에 넣고, 그 뒤로는 사용자가 메뉴에서 정한 값을 따른다.
+function ensureLoginItemOnce(): void {
+  if (!canSetLoginItem) return
+  const data = readData()
+  if (data.loginItemInitialized) return
+  app.setLoginItemSettings({ openAtLogin: true })
+  data.loginItemInitialized = true
+  writeData(data)
+}
+
 function createTray(): void {
   const isWin = process.platform === 'win32'
   const iconFile = isWin ? 'icon.ico' : 'iconTemplate.png'
@@ -235,11 +250,24 @@ function createTray(): void {
   const contextMenu = Menu.buildFromTemplate([
     { label: '열기', click: () => createMainWindow() },
     { label: '업데이트 확인', click: () => void checkForUpdate(true) },
+    {
+      id: 'openAtLogin',
+      label: '로그인 시 자동 실행',
+      type: 'checkbox',
+      visible: canSetLoginItem,
+      checked: canSetLoginItem && app.getLoginItemSettings().openAtLogin,
+      click: (item) => app.setLoginItemSettings({ openAtLogin: item.checked })
+    },
     { type: 'separator' },
     { label: `버전 ${app.getVersion()}`, enabled: false },
     { label: '종료', click: () => app.quit() }
   ])
-  tray.on('right-click', () => tray!.popUpContextMenu(contextMenu))
+  tray.on('right-click', () => {
+    // 시스템 설정에서 바꿨을 수도 있어서 열 때마다 실제 등록 상태로 맞춤
+    const loginItem = contextMenu.getMenuItemById('openAtLogin')
+    if (loginItem && canSetLoginItem) loginItem.checked = app.getLoginItemSettings().openAtLogin
+    tray!.popUpContextMenu(contextMenu)
+  })
 }
 
 function sendToAllWindows(channel: string, data: unknown): void {
@@ -1152,6 +1180,7 @@ app.whenReady().then(() => {
   cachedSettings = initial.settings
   loadHolidayCache()
   cleanupTrash()
+  ensureLoginItemOnce()
   createTray()
   createPopupWindow()
   startAlarmChecker()

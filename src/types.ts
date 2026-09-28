@@ -199,6 +199,8 @@ export interface AppData {
   skippedVersion?: string
   /** 마지막으로 업데이트를 확인한 시각. 재시작을 반복해도 주기를 지키게 하는 기준 */
   lastUpdateCheckAt?: string
+  /** 로그인 항목을 처음 한 번 켜 뒀는지. 그 뒤로는 사용자가 메뉴에서 정한 값을 건드리지 않는다 */
+  loginItemInitialized?: boolean
 }
 
 export interface ElectronAPI {
