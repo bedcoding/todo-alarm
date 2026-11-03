@@ -117,6 +117,14 @@ export default function ScheduleTab({ schedules, onSave, onDelete, settings, onS
     ? schedules.filter((s) => s.date === selectedDate)
     : [...schedules].sort((a, b) => new Date(a.datetime).getTime() - new Date(b.datetime).getTime())
 
+  // 같은 날짜끼리 묶어서 날짜는 묶음 머리에 한 번만 보여준다
+  const scheduleGroups: { date: string; items: Schedule[] }[] = []
+  for (const s of filteredSchedules) {
+    const last = scheduleGroups[scheduleGroups.length - 1]
+    if (last && last.date === s.date) last.items.push(s)
+    else scheduleGroups.push({ date: s.date, items: [s] })
+  }
+
   const scheduleDates = schedules.map((s) => s.date)
 
   const formatDisplayDate = (dateStr: string): string => {
@@ -207,38 +215,44 @@ export default function ScheduleTab({ schedules, onSave, onDelete, settings, onS
                 <EmptyBell message="일정을 추가해보세요" />
               )
             ) : (
-              filteredSchedules.map((s) => (
-                <div
-                  key={s.id}
-                  className={`schedule-item ${isPast(s.datetime) ? 'past' : ''} ${s.notified ? 'notified' : ''}`}
-                >
-                  <div className="schedule-info">
-                    <span className="schedule-date">{formatDisplayDate(s.date)}</span>
-                    <span className="schedule-time">{formatTime(s.time)}</span>
-                    {s.routineId && (
-                      <span
-                        className="routine-badge"
-                        data-tooltip={s.detached ? '반복 일정 (개별 수정됨)' : '반복 일정에서 자동 생성'}
-                      >
-                        🔁
-                      </span>
-                    )}
-                    {s.notified && !isPast(s.datetime) && (
-                      <button
-                        className="resend-btn"
-                        onClick={() => resendNotification(s.id)}
-                        data-tooltip="알림 다시 받기"
-                      >
-                        🔔
-                      </button>
-                    )}
-                    <span className="schedule-content-wrap">
-                      <span className="schedule-content">{s.content}</span>
-                      <span className="schedule-content-tooltip">{s.content}</span>
-                    </span>
+              scheduleGroups.map((g) => (
+                <div key={g.date} className="schedule-group">
+                  <div className={`schedule-group-date ${g.items.every((s) => isPast(s.datetime)) ? 'past' : ''}`}>
+                    {formatDisplayDate(g.date)}
                   </div>
-                  <button className="edit-btn" onClick={() => startEdit(s)}>✎</button>
-                  <button className="delete-btn" onClick={() => removeSchedule(s.id)}>×</button>
+                  {g.items.map((s) => (
+                    <div
+                      key={s.id}
+                      className={`schedule-item ${isPast(s.datetime) ? 'past' : ''} ${s.notified ? 'notified' : ''}`}
+                    >
+                      <div className="schedule-info">
+                        <span className="schedule-time">{formatTime(s.time)}</span>
+                        {s.routineId && (
+                          <span
+                            className="routine-badge"
+                            data-tooltip={s.detached ? '반복 일정 (개별 수정됨)' : '반복 일정에서 자동 생성'}
+                          >
+                            🔁
+                          </span>
+                        )}
+                        {s.notified && !isPast(s.datetime) && (
+                          <button
+                            className="resend-btn"
+                            onClick={() => resendNotification(s.id)}
+                            data-tooltip="알림 다시 받기"
+                          >
+                            🔔
+                          </button>
+                        )}
+                        <span className="schedule-content-wrap">
+                          <span className="schedule-content">{s.content}</span>
+                          <span className="schedule-content-tooltip">{s.content}</span>
+                        </span>
+                      </div>
+                      <button className="edit-btn" onClick={() => startEdit(s)}>✎</button>
+                      <button className="delete-btn" onClick={() => removeSchedule(s.id)}>×</button>
+                    </div>
+                  ))}
                 </div>
               ))
             )}

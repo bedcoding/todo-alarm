@@ -255,36 +255,47 @@ input:focus, textarea:focus {
   overflow-y: scroll;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 16px;
   padding-bottom: 4px;
 }
 
 
 .schedule-item {
+  /* 내용 툴팁의 기준 상자.
+     내용 칸은 시간 뒤에서 시작하므로 내용 칸을 기준으로 하면 툴팁이 오른쪽으로 넘친다. */
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 12px 16px;
-  background: #16213e;
-  border-radius: 10px;
-  border-left: 3px solid #e94560;
+  background: #1f2847;
   transition: background 0.2s;
 }
 
 .schedule-item:hover {
-  background: #1a2742;
+  background: #253055;
+}
+
+/* 같은 날짜의 일정은 한 상자로 보이도록 바깥 모서리만 둥글게 하고 사이에 줄을 긋는다 */
+.schedule-group-date + .schedule-item {
+  border-top-left-radius: 10px;
+  border-top-right-radius: 10px;
+}
+
+.schedule-item:last-child {
+  border-bottom-left-radius: 10px;
+  border-bottom-right-radius: 10px;
+}
+
+.schedule-item + .schedule-item {
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
 }
 
 /* 흐림을 항목 전체에 걸면 opacity가 합성 그룹을 만들어 자식인 툴팁까지 반투명해진다.
-   툴팁은 오버레이라 또렷해야 하므로, 흐림 대상을 본문 요소로만 좁힌다 */
-.schedule-item.past {
-  border-left-color: #555;
-}
-
-/* .schedule-content-tooltip은 .schedule-content의 형제라 여기 영향을 받지 않는다.
+   툴팁은 오버레이라 또렷해야 하므로, 흐림 대상을 본문 요소로만 좁힌다.
+   .schedule-content-tooltip은 .schedule-content의 형제라 여기 영향을 받지 않는다.
    ::after로 툴팁을 다는 .routine-badge는 부모를 흐리면 상쇄가 불가능하므로 손대지 않는다
    (기본 opacity 0.7로 이미 물러나 있다). */
-.schedule-item.past .schedule-date,
 .schedule-item.past .schedule-time,
 .schedule-item.past .schedule-content,
 .schedule-item.past .edit-btn,
@@ -292,35 +303,46 @@ input:focus, textarea:focus {
   opacity: 0.5;
 }
 
-.schedule-item.notified {
-  border-left-color: #4caf50;
+/* 지난 일정과 알림이 울린 일정은 시간 색으로 구분한다 */
+.schedule-item.past .schedule-time {
+  color: #888;
+}
+
+.schedule-item.notified .schedule-time {
+  color: #4caf50;
 }
 
 .schedule-info {
   display: flex;
-  flex-wrap: wrap;
-  gap: 4px 12px;
+  gap: 12px;
   align-items: center;
   flex: 1;
   min-width: 0;
+  margin-right: 8px;
 }
 
-.schedule-date {
+.schedule-group-date {
   color: #e94560;
   font-weight: 600;
-  font-size: 13px;
-  white-space: nowrap;
+  font-size: 12px;
+  margin: 0 0 7px 4px;
+}
+
+.schedule-group-date.past {
+  color: #888;
+  opacity: 0.5;
 }
 
 .schedule-time {
-  color: #888;
+  color: #c9cce0;
   font-size: 13px;
+  font-variant-numeric: tabular-nums;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .schedule-content-wrap {
-  position: relative;
-  flex-basis: 100%;
+  flex: 1;
   min-width: 0;
   display: flex;
 }
@@ -359,7 +381,7 @@ input:focus, textarea:focus {
   display: block;
 }
 
-.schedule-item:last-child .schedule-content-tooltip {
+.schedule-group:last-child .schedule-item:last-child .schedule-content-tooltip {
   top: auto;
   bottom: 110%;
 }
@@ -419,7 +441,7 @@ input:focus, textarea:focus {
   display: block;
 }
 
-.schedule-item:last-child .resend-btn::after {
+.schedule-group:last-child .schedule-item:last-child .resend-btn::after {
   top: auto;
   bottom: calc(100% + 6px);
 }
@@ -633,22 +655,36 @@ input:focus, textarea:focus {
   overflow-y: scroll;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  /* 첫/마지막 항목의 드롭 표시선이 잘리지 않도록 여백 확보 */
-  padding: 5px 0;
+  /* 첫/마지막 항목의 드롭 표시선이 잘리지 않도록 위아래 여백 확보.
+     padding 단축 속성을 쓰면 맨 위 공통 규칙의 padding-right(스크롤바 자리)를 덮어쓰므로 나눠 쓴다. */
+  padding-top: 5px;
+  padding-bottom: 5px;
 }
 
 
 
 .memo-item {
   padding: 14px 16px;
-  background: #16213e;
-  border-radius: 10px;
-  border-left: 3px solid #4dabf7;
+  background: #1f2847;
+}
+
+/* 메모도 일정처럼 한 상자로 보이도록 바깥 모서리만 둥글게 하고 사이에 줄을 긋는다 */
+.memo-item:first-child {
+  border-top-left-radius: 10px;
+  border-top-right-radius: 10px;
+}
+
+.memo-item:last-child {
+  border-bottom-left-radius: 10px;
+  border-bottom-right-radius: 10px;
+}
+
+.memo-item + .memo-item {
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
 }
 
 .memo-item.slim {
-  padding: 10px 12px;
+  padding: 12px;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -687,14 +723,16 @@ input:focus, textarea:focus {
   height: 2px;
   background: #e94560;
   border-radius: 2px;
+  /* 항목 사이 간격이 없으므로 이웃 항목 배경에 가리지 않게 올린다 */
+  z-index: 1;
 }
 
 .memo-item.drop-above::before {
-  top: -5px;
+  top: -1px;
 }
 
 .memo-item.drop-below::after {
-  bottom: -5px;
+  bottom: -1px;
 }
 
 .memo-item.dragging .memo-grip {
@@ -1070,12 +1108,7 @@ input:focus, textarea:focus {
 
 /* 팝업 일정 아이템 - 컴팩트 */
 .popup-mode .schedule-item {
-  padding: 10px 12px;
-}
-
-.popup-mode .schedule-info {
-  gap: 8px;
-  flex-wrap: wrap;
+  padding: 12px;
 }
 
 .popup-mode .schedule-content {
@@ -1085,7 +1118,7 @@ input:focus, textarea:focus {
 
 /* 팝업 메모 */
 .popup-mode .memo-item {
-  padding: 10px 12px;
+  padding: 12px;
 }
 
 .popup-mode .memo-content {
@@ -1990,16 +2023,24 @@ input:focus, textarea:focus {
   overflow-y: scroll;
   display: flex;
   flex-direction: column;
-  gap: 8px;
 }
 .trash-item {
   display: flex;
   align-items: center;
   gap: 8px;
   padding: 10px 12px;
-  background: #16213e;
-  border-radius: 8px;
-  border-left: 3px solid #888;
+  background: #1f2847;
+}
+.trash-item:first-child {
+  border-top-left-radius: 8px;
+  border-top-right-radius: 8px;
+}
+.trash-item:last-child {
+  border-bottom-left-radius: 8px;
+  border-bottom-right-radius: 8px;
+}
+.trash-item + .trash-item {
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
 }
 .trash-item-info {
   flex: 1;
@@ -2869,7 +2910,7 @@ input:focus, textarea:focus {
 }
 
 /* 마지막 항목은 아래가 막혀 있으므로 위로 */
-.schedule-item:last-child .routine-badge::after {
+.schedule-group:last-child .schedule-item:last-child .routine-badge::after {
   top: auto;
   bottom: calc(100% + 6px);
 }
@@ -2909,7 +2950,6 @@ input:focus, textarea:focus {
   padding: 10px 12px;
   background: #1a2742;
   border-radius: 8px;
-  border-left: 3px solid #e94560;
   transition: background 0.2s;
 }
 
@@ -2919,7 +2959,6 @@ input:focus, textarea:focus {
 
 .routine-item.off {
   opacity: 0.45;
-  border-left-color: #555;
 }
 
 .routine-toggle {
