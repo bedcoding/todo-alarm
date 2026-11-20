@@ -1231,9 +1231,19 @@ ipcMain.handle('save-memos', (_, memos: Memo[]) => {
 ipcMain.handle('get-settings', () => readData().settings)
 ipcMain.handle('save-settings', (_, settings: Settings) => {
   const data = readData()
+  const prev = data.settings
   data.settings = settings
   writeData(data)
   cachedSettings = settings
+  // 오늘 일정 알림은 예약할 때의 시각으로 타이머가 걸려 있다.
+  // 켜고 끄거나 시각을 바꿨을 때 다시 예약하지 않으면 화면 잠금을 풀거나 주기 점검이 돌 때까지 예전 시각에 온다.
+  // 다른 설정을 저장할 때는 건드리지 않는다.
+  if (
+    prev.morningAlertEnabled !== settings.morningAlertEnabled ||
+    prev.morningAlertTime !== settings.morningAlertTime
+  ) {
+    scheduleMorningAlert()
+  }
   return true
 })
 
