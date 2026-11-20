@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import type { RoutineRule, RoutineFreq, HolidayShift, HolidayBasis, HolidayEntry } from '../../types'
 import { makeRoutine } from '../../types'
+import TimeField from './TimeField'
 
 const WEEKDAY_LABELS = ['일', '월', '화', '수', '목', '금', '토']
 
@@ -417,11 +418,9 @@ export default function RoutineManager({ routines, onSave, onClose }: RoutineMan
 
               <div className="settings-row">
                 <label>알림 시각</label>
-                <input
-                  type="time"
-                  className="time-input"
+                <TimeField
                   value={draft.time}
-                  onChange={(e) => setDraft({ ...draft, time: e.target.value })}
+                  onChange={(time) => setDraft((d) => (d ? { ...d, time } : d))}
                 />
               </div>
 

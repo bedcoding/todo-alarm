@@ -1441,6 +1441,34 @@ input:focus, textarea:focus {
   width: 125px;
 }
 
+/* 24시간제 시각 버튼 (TimeField). 크기는 시각 입력 칸(.time-input)과 같게 둔다 */
+.time-field-btn {
+  width: 125px;
+  background: #16213e;
+  border: 1px solid #333;
+  border-radius: 6px;
+  padding: 6px 10px;
+  color: #e0e0e0;
+  font-size: 13px;
+  font-family: inherit;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.time-field-btn:hover {
+  border-color: #e94560;
+}
+
+/* 설정 모달(z-index 100) 위에 겹쳐 떠야 한다 */
+.time-field-overlay {
+  z-index: 101;
+}
+
+.time-field-dropdown {
+  z-index: 102;
+}
+
 .time-range {
   display: flex;
   align-items: center;
@@ -1448,7 +1476,8 @@ input:focus, textarea:focus {
   padding: 0 0 10px;
 }
 
-.time-range .time-input {
+.time-range .time-input,
+.time-range .time-field-btn {
   flex: 1;
   min-width: 0;
 }
@@ -3324,7 +3353,6 @@ input:focus, textarea:focus {
   cursor: default;
 }
 
-.routine-modal .settings-row select,
-.routine-modal .settings-row input[type='time'] {
+.routine-modal .settings-row select {
   max-width: 170px;
 }

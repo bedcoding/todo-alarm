@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import Calendar from './Calendar'
 import EmptyBell from './EmptyBell'
 import TimePicker from './TimePicker'
+import TimeField from './TimeField'
 import RoutineManager from './RoutineManager'
 import type { Schedule, Settings, RoutineRule } from '../../types'
 import { makeId } from '../../types'
@@ -405,11 +406,9 @@ export default function ScheduleTab({ schedules, onSave, onDelete, settings, onS
             {settings.morningAlertEnabled && (
               <div className="settings-row">
                 <label>알림 시각</label>
-                <input
-                  type="time"
+                <TimeField
                   value={settings.morningAlertTime}
-                  onChange={(e) => onSettingsChange({ morningAlertTime: e.target.value })}
-                  className="time-input"
+                  onChange={(t) => onSettingsChange({ morningAlertTime: t })}
                 />
               </div>
             )}

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import type { AwayCheckSettings } from '../../types'
+import TimeField from './TimeField'
 
 interface AwayCheckTabProps {
   awayCheck: AwayCheckSettings
@@ -165,7 +166,7 @@ export default function AwayCheckTab({ awayCheck, onSave }: AwayCheckTabProps) {
             </div>
             {local.excludeBeforeWork && (
               <div className="time-range no-border">
-                <input type="time" value={local.beforeWorkTime} onChange={(e) => update({ beforeWorkTime: e.target.value })} className="time-input" />
+                <TimeField value={local.beforeWorkTime} onChange={(t) => update({ beforeWorkTime: t })} />
                 <span>이전</span>
               </div>
             )}
@@ -180,9 +181,9 @@ export default function AwayCheckTab({ awayCheck, onSave }: AwayCheckTabProps) {
             </div>
             {local.excludeLunch && (
               <div className="time-range no-border">
-                <input type="time" value={local.lunchStart} onChange={(e) => update({ lunchStart: e.target.value })} className="time-input" />
+                <TimeField value={local.lunchStart} onChange={(t) => update({ lunchStart: t })} />
                 <span>~</span>
-                <input type="time" value={local.lunchEnd} onChange={(e) => update({ lunchEnd: e.target.value })} className="time-input" />
+                <TimeField value={local.lunchEnd} onChange={(t) => update({ lunchEnd: t })} />
               </div>
             )}
             <div className="settings-row compact">
@@ -196,7 +197,7 @@ export default function AwayCheckTab({ awayCheck, onSave }: AwayCheckTabProps) {
             </div>
             {local.excludeAfterWork && (
               <div className="time-range no-border">
-                <input type="time" value={local.afterWorkTime} onChange={(e) => update({ afterWorkTime: e.target.value })} className="time-input" />
+                <TimeField value={local.afterWorkTime} onChange={(t) => update({ afterWorkTime: t })} />
                 <span>이후</span>
               </div>
             )}

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, type ReactNode } from 'react'
 import type { DutySettings, DutyPerson } from '../../types'
 import ConfirmDialog from './ConfirmDialog'
+import TimeField from './TimeField'
 
 interface DutyTabProps {
   duty: DutySettings
@@ -436,15 +437,9 @@ export default function DutyTab({ duty, onSave }: DutyTabProps) {
             </div>
             <div className="settings-row">
               <label>알림 시각</label>
-              <input
-                type="time"
+              <TimeField
                 value={duty.alertTime}
-                onChange={(e) => onSave({ ...duty, alertTime: e.target.value })}
-                onClick={(e) => {
-                  const el = e.currentTarget as HTMLInputElement & { showPicker?: () => void }
-                  el.showPicker?.()
-                }}
-                className="time-input"
+                onChange={(t) => onSave({ ...duty, alertTime: t })}
               />
             </div>
             <div className="duty-alert-status">{renderDutyAlertStatus(duty, () => window.api.resetDutyLastSent())}</div>
