@@ -327,8 +327,14 @@ function sendScheduleNotification(schedule: Schedule, missed: boolean, settings:
   writeData(data)
   sendToAllWindows('schedules-updated', data.schedules)
 
-  const timingText = settings.alertTiming > 0 ? ` (${settings.alertTiming}분 전)` : ''
-  const title = missed ? `📌 놓친 알림` : `📌 일정 알림${timingText}`
+  // missed는 알릴 시각을 놓쳤다는 뜻이지 일정을 놓쳤다는 뜻이 아니다.
+  // 일정이 아직 남아 있으면 놓친 알림이라 하지 않고, 설정된 타이밍 대신 실제로 남은 시간을 적는다.
+  // 타이밍을 30분 전으로 늘렸는데 일정이 20분 뒤인 경우가 여기에 해당한다.
+  const msLeft = new Date(schedule.datetime).getTime() - Date.now()
+  const missedSchedule = missed && msLeft <= 0
+  const minutesBefore = missed ? Math.round(msLeft / 60000) : settings.alertTiming
+  const timingText = minutesBefore > 0 ? ` (${minutesBefore}분 전)` : ''
+  const title = missedSchedule ? `📌 놓친 알림` : `📌 일정 알림${timingText}`
 
   new Notification({
     title: `${title} ${schedule.date} ${schedule.time}`,
@@ -337,7 +343,7 @@ function sendScheduleNotification(schedule: Schedule, missed: boolean, settings:
   }).show()
 
   if (settings.slackEnabled) {
-    const prefix = missed ? `📌 *놓친 알림*` : `📌 *일정 알림${timingText}*`
+    const prefix = missedSchedule ? `📌 *놓친 알림*` : `📌 *일정 알림${timingText}*`
     sendSlackNotification(
       settings,
       `${prefix}\n📅 ${schedule.date} ${schedule.time}\n${schedule.content}`
@@ -1047,7 +1053,8 @@ function scheduleExactTimers(): void {
     const diff = alertTime.getTime() - now.getTime()
 
     if (diff <= 0) {
-      // 이미 지난 알림 → 즉시 발송 (놓친 알림)
+      // 알릴 시각이 이미 지났으면 바로 발송한다.
+      // 1분 넘게 늦었으면 놓친 것으로 넘기고, 제목을 어떻게 적을지는 받는 쪽이 일정 시각을 보고 정한다.
       sendScheduleNotification(schedule, diff < -60000, settings)
     } else if (diff <= 24 * 60 * 60 * 1000) {
       // 24시간 이내 알림 → 정확한 시간에 setTimeout 예약
