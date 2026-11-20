@@ -1244,6 +1244,11 @@ ipcMain.handle('save-settings', (_, settings: Settings) => {
   ) {
     scheduleMorningAlert()
   }
+  // 일정 알림도 예약할 때의 타이밍으로 울릴 시각이 정해져 있다.
+  // 타이밍을 바꾸고 다시 예약하지 않으면 예전 시각에 울리면서 제목에는 새 타이밍이 찍힌다.
+  if (prev.alertTiming !== settings.alertTiming) {
+    scheduleExactTimers()
+  }
   return true
 })
 
