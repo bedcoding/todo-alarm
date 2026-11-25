@@ -1510,6 +1510,18 @@ function randomDutyColor(): string {
   return `hsl(${hue}, ${saturation}%, ${lightness}%)`
 }
 
+/** 'YYYY-MM-DD'나 'YYYY-MM'에서 'YYYY-MM'을 뽑는다 */
+function dutyMonthKey(s: string): string | null {
+  const m = /^(\d{4})-(\d{2})/.exec(s)
+  return m ? `${m[1]}-${m[2]}` : null
+}
+
+/** 이 달보다 앞선 달의 배정은 동기화할 때 정리한다 (현재 달에서 12개월 전) */
+function dutyRetentionStartMonth(now = new Date()): string {
+  const d = new Date(now.getFullYear(), now.getMonth() - 12, 1)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+}
+
 function applyDutyRoster(payload: DutyApiResponse, opts: { apiUrl?: string }): {
   success: boolean
   error?: string
@@ -1572,7 +1584,7 @@ function applyDutyRoster(payload: DutyApiResponse, opts: { apiUrl?: string }): {
   })
 
   const validIds = new Set(people.map((p) => p.id))
-  const assignments = payload.duties
+  const incoming = payload.duties
     .filter((d) => typeof d?.date === 'string' && Array.isArray(d.assignees) && d.assignees.length > 0)
     .map((d, idx) => ({
       id: `a_${d.date}_${idx}`,
@@ -1583,10 +1595,32 @@ function applyDutyRoster(payload: DutyApiResponse, opts: { apiUrl?: string }): {
     }))
     .filter((e) => e.personIds.length > 0)
 
+  // 응답이 한 달치씩 오기 때문에 전체를 갈아끼우면 12월을 받는 순간 11월이 사라진다.
+  // 응답에 들어 있는 달만 새 값으로 바꾸고 나머지 달은 그대로 둔다.
+  const fetchedMonths = new Set<string>()
+  const payloadMonth = typeof payload.month === 'string' ? dutyMonthKey(payload.month) : null
+  if (payloadMonth) fetchedMonths.add(payloadMonth)
+  for (const d of payload.duties) {
+    const key = typeof d?.date === 'string' ? dutyMonthKey(d.date) : null
+    if (key) fetchedMonths.add(key)
+  }
+  // 그대로 두기만 하면 끝없이 쌓이니 1년 넘게 지난 달은 이때 함께 정리한다.
+  const retentionStart = dutyRetentionStartMonth()
+  const kept = data.duty.assignments.filter((a) => {
+    const key = dutyMonthKey(a.date)
+    if (!key) return true
+    return !fetchedMonths.has(key) && key >= retentionStart
+  })
+  const assignments = [...kept, ...incoming].sort((a, b) => a.date.localeCompare(b.date))
+
+  // 남겨 둔 달에만 나오는 사람(이번 응답 멤버 목록에서 빠진 사람)도 같이 남겨야 이름이 보인다.
+  const referenced = new Set(assignments.flatMap((a) => a.personIds))
+  const carriedPeople = data.duty.people.filter((p) => !validIds.has(p.id) && referenced.has(p.id))
+
   const syncedAt = new Date().toISOString()
   data.duty = {
     ...data.duty,
-    people,
+    people: [...people, ...carriedPeople],
     assignments,
     apiUrl: opts.apiUrl ?? data.duty.apiUrl,
     lastApiSyncAt: syncedAt
@@ -1597,7 +1631,7 @@ function applyDutyRoster(payload: DutyApiResponse, opts: { apiUrl?: string }): {
   return {
     success: true,
     peopleCount: people.length,
-    assignmentsCount: assignments.length,
+    assignmentsCount: incoming.length,
     month: typeof payload.month === 'string' ? payload.month : undefined,
     syncedAt
   }
